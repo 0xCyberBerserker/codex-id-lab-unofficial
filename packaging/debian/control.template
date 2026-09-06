@@ -3,7 +3,7 @@ Version: @VERSION@
 Section: devel
 Priority: optional
 Architecture: amd64
-Depends: electron42, nodejs, curl, jq, desktop-file-utils
+Depends: electron42, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
 Maintainer: unofficial automation
 Description: Unofficial Codex UI Linux port
  Unofficial packaging automation for Codex UI.

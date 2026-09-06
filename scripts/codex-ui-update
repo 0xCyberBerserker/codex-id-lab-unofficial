@@ -68,29 +68,36 @@ need rm
 need date
 
 sync_desktop_entry() {
-  local system_entry="${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}/codex-ui-linux.desktop"
+  local system_dir="${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}"
   local user_dir="${CODEXUI_USER_APPLICATIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/applications}"
-  local user_entry="$user_dir/codex-ui-linux.desktop"
+  local entry system_entry user_entry
   local backup
 
-  [[ -r "$system_entry" ]] || {
-    echo "$PROGRAM: system desktop entry not found: $system_entry" >&2
-    return 1
-  }
-
-  if command -v desktop-file-validate >/dev/null 2>&1; then
-    desktop-file-validate "$system_entry"
-  fi
-
-  if [[ -e "$user_entry" || -L "$user_entry" ]]; then
-    if ! cmp -s -- "$system_entry" "$user_entry"; then
-      backup="$user_entry.bak-codex-ui-update-$(date +%Y%m%d-%H%M%S)"
-      cp -p -- "$user_entry" "$backup"
-      echo "$PROGRAM: preserved local desktop override as $backup"
+  for entry in codex-ui-linux.desktop codex-ui-tools.desktop; do
+    system_entry="$system_dir/$entry"
+    user_entry="$user_dir/$entry"
+    if [[ ! -r "$system_entry" ]]; then
+      if [[ "$entry" == "codex-ui-linux.desktop" ]]; then
+        echo "$PROGRAM: system desktop entry not found: $system_entry" >&2
+        return 1
+      fi
+      continue
     fi
-    rm -f -- "$user_entry"
-    echo "$PROGRAM: removed stale local desktop override"
-  fi
+
+    if command -v desktop-file-validate >/dev/null 2>&1; then
+      desktop-file-validate "$system_entry"
+    fi
+
+    if [[ -e "$user_entry" || -L "$user_entry" ]]; then
+      if ! cmp -s -- "$system_entry" "$user_entry"; then
+        backup="$user_entry.bak-codex-ui-update-$(date +%Y%m%d-%H%M%S)"
+        cp -p -- "$user_entry" "$backup"
+        echo "$PROGRAM: preserved local desktop override as $backup"
+      fi
+      rm -f -- "$user_entry"
+      echo "$PROGRAM: removed stale local desktop override: $entry"
+    fi
+  done
 
   if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$user_dir" >/dev/null 2>&1 || true
@@ -123,19 +130,19 @@ deps=()
 case " $id $id_like " in
   *" arch "*|*" cachyos "*)
     pkg_kind="pkg.tar.zst"
-    deps=(electron42 nodejs curl jq desktop-file-utils)
+    deps=(electron42 nodejs curl jq desktop-file-utils pyside6 spectacle tesseract tesseract-data-eng tesseract-data-spa zbar)
     install_cmd=(pacman -U)
     [[ "$FORCE" -eq 1 ]] || install_cmd+=(--needed)
     ;;
   *" debian "*|*" ubuntu "*)
     pkg_kind="deb"
-    deps=(electron42 nodejs curl jq desktop-file-utils)
+    deps=(electron42 nodejs curl jq desktop-file-utils python3-pyside6.qtwidgets python3-pyside6.qtnetwork kde-spectacle tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa zbar-tools)
     install_cmd=(apt-get install -y)
     [[ "$FORCE" -eq 1 ]] && install_cmd+=(--reinstall)
     ;;
   *" fedora "*|*" rhel "*|*" centos "*)
     pkg_kind="rpm"
-    deps=(electron42 nodejs curl jq desktop-file-utils)
+    deps=(electron42 nodejs curl jq desktop-file-utils python3-pyside6 spectacle tesseract tesseract-langpack-eng tesseract-langpack-spa zbar)
     if [[ "$FORCE" -eq 1 ]]; then
       install_cmd=(dnf reinstall -y)
     else
@@ -291,6 +298,7 @@ echo "$PROGRAM: installing $package"
 command -v codex-ui-linux >/dev/null 2>&1 || { echo "$PROGRAM: codex-ui-linux not found after install" >&2; exit 1; }
 command -v codex-ui-update >/dev/null 2>&1 || { echo "$PROGRAM: codex-ui-update not found after install" >&2; exit 1; }
 command -v codexui-update >/dev/null 2>&1 || { echo "$PROGRAM: compatibility alias codexui-update not found after install" >&2; exit 1; }
+command -v codex-ui-tools >/dev/null 2>&1 || { echo "$PROGRAM: codex-ui-tools not found after install" >&2; exit 1; }
 
 sync_desktop_entry
 

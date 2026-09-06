@@ -9,6 +9,12 @@ Requires: nodejs
 Requires: curl
 Requires: jq
 Requires: desktop-file-utils
+Requires: python3-pyside6
+Requires: spectacle
+Requires: tesseract
+Requires: tesseract-langpack-eng
+Requires: tesseract-langpack-spa
+Requires: zbar
 
 %description
 Unofficial packaging automation for Codex UI.
@@ -26,6 +32,9 @@ tar -xzf %{_sourcedir}/codex-ui-linux-port-%{version}-payload.tar.gz -C %{buildr
 /usr/bin/codex-ui-linux
 /usr/bin/codex-ui-update
 /usr/bin/codexui-update
+/usr/bin/codex-ui-tools
+/usr/lib/systemd/user/codex-ui-companion.service
 /usr/share/applications/codex-ui-linux.desktop
+/usr/share/applications/codex-ui-tools.desktop
 /usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg
 /usr/share/licenses/codex-ui-linux-port

@@ -26,6 +26,16 @@ The legacy `codexui-update` command remains available as a compatibility alias w
 
 The smoke test launches Codex UI with a temporary profile and checks for a startup marker.
 
+## Local Companion
+
+The package includes `codex-ui-tools`. It shows local Codex usage, captures text and QR codes, and records safe crash metadata. Enable its tray service with:
+
+```bash
+systemctl --user enable --now codex-ui-companion.service
+```
+
+The companion is a separate process and does not restart Codex UI. Detailed commands and privacy limits are documented in `docs/companion.md`.
+
 ## Supported Systems
 
 - Arch/CachyOS through `pacman`
@@ -69,6 +79,16 @@ codex-ui-update --smoke
 El comando anterior `codexui-update` permanece disponible como alias compatible con los mismos flags.
 
 El smoke test lanza Codex UI con un perfil temporal y comprueba una marca de arranque correcto.
+
+## Companion local
+
+El paquete incluye `codex-ui-tools`. Muestra el consumo local de Codex, captura texto y códigos QR y registra metadatos seguros de fallos. Su servicio de bandeja se habilita con:
+
+```bash
+systemctl --user enable --now codex-ui-companion.service
+```
+
+El companion es un proceso independiente y no reinicia Codex UI. Los comandos y límites de privacidad se documentan en `docs/companion.md`.
 
 ## Sistemas soportados
 

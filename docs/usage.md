@@ -42,6 +42,16 @@ CODEXUI_ELECTRON_FLAGS="--disable-vulkan --force-device-scale-factor=1" codex-ui
 
 No language, X11 backend, Vulkan mode, or scale factor is forced by default.
 
+## Local Companion
+
+The package ships `codex-ui-tools`, a native Qt companion for local usage status, OCR, private QR capture, and metadata-only coredump notifications. Enable it with:
+
+```bash
+systemctl --user enable --now codex-ui-companion.service
+```
+
+This service is independent from the Codex UI process. Enabling or restarting it does not restart Codex UI. See [companion.md](companion.md) for its privacy boundaries and commands.
+
 ## Discord Rich Presence
 
 Copy `docs/discord-rich-presence.example.json` to
@@ -51,6 +61,16 @@ bold title shown by Discord. Asset fields accept keys configured in the Discord
 Developer Portal. Restart Codex UI after editing the file.
 
 No client secret or API key is required.
+
+## Companion local (Español)
+
+El paquete incluye `codex-ui-tools`, un companion Qt nativo para consultar el consumo local, capturar OCR y QR privados y notificar coredumps usando solo metadatos. Se habilita con:
+
+```bash
+systemctl --user enable --now codex-ui-companion.service
+```
+
+Este servicio es independiente del proceso de Codex UI. Habilitarlo o reiniciarlo no reinicia Codex UI. Consulta [companion.md](companion.md) para ver sus límites de privacidad y comandos.
 
 ## Discord Rich Presence (Español)
 

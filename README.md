@@ -42,6 +42,7 @@ This repository rebuilds upstream Codex UI release artifacts into Linux packages
 - Fedora/RHEL-like package: `.rpm` (experimental)
 - Latest official macOS source asset: `Codex-$VERSION.dmg`
 - Release manifest and checksums
+- Native Qt companion for usage, OCR, private QR capture, and safe crash metadata
 - Future AUR metadata under `packaging/aur`
 
 ## Why It Exists
@@ -125,6 +126,7 @@ Publication and redistribution notes live in [docs/publication.md](docs/publicat
 ## Documentation
 
 - [Usage](docs/usage.md)
+- [Local Companion](docs/companion.md)
 - [Packaging](docs/packaging.md)
 - [Security And Privacy](docs/security.md)
 - [Changelog](CHANGELOG.md)
@@ -140,6 +142,7 @@ Publication and redistribution notes live in [docs/publication.md](docs/publicat
 ## Documentación
 
 - [Uso](docs/usage.md)
+- [Companion local](docs/companion.md)
 - [Empaquetado](docs/packaging.md)
 - [Seguridad y privacidad](docs/security.md)
 - [Registro de cambios](CHANGELOG.md)

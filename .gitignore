@@ -17,6 +17,8 @@ node_modules/
 .npm/
 .pnpm-store/
 .cache/
+__pycache__/
+*.pyc
 
 # Local runtime state
 .codex/

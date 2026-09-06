@@ -14,14 +14,17 @@ mkdir -p "$DIST"
 
 stage_common() {
   local target="$1"
-  mkdir -p "$target/opt" "$target/usr/bin" "$target/usr/share/applications" "$target/usr/share/icons/hicolor/scalable/apps" "$target/usr/share/licenses/codex-ui-linux-port"
+  mkdir -p "$target/opt" "$target/usr/bin" "$target/usr/lib/systemd/user" "$target/usr/share/applications" "$target/usr/share/icons/hicolor/scalable/apps" "$target/usr/share/licenses/codex-ui-linux-port"
   cp -a "$PKGROOT/opt/codex-ui-linux-port" "$target/opt/"
   install -m 755 "$ROOT/scripts/codex-ui-update" "$target/opt/codex-ui-linux-port/bin/codex-ui-update"
   ln -s codex-ui-update "$target/opt/codex-ui-linux-port/bin/codexui-update"
   ln -s /opt/codex-ui-linux-port/bin/codex-ui-linux "$target/usr/bin/codex-ui-linux"
   ln -s /opt/codex-ui-linux-port/bin/codex-ui-update "$target/usr/bin/codex-ui-update"
   ln -s /opt/codex-ui-linux-port/bin/codexui-update "$target/usr/bin/codexui-update"
+  ln -s /opt/codex-ui-linux-port/bin/codex-ui-tools "$target/usr/bin/codex-ui-tools"
   install -m 644 "$PKGROOT/opt/codex-ui-linux-port/share/codex-ui-linux.desktop" "$target/usr/share/applications/codex-ui-linux.desktop"
+  install -m 644 "$PKGROOT/opt/codex-ui-linux-port/share/codex-ui-tools.desktop" "$target/usr/share/applications/codex-ui-tools.desktop"
+  install -m 644 "$PKGROOT/opt/codex-ui-linux-port/share/systemd/user/codex-ui-companion.service" "$target/usr/lib/systemd/user/codex-ui-companion.service"
   if [[ -f "$PKGROOT/opt/codex-ui-linux-port/share/icons/hicolor/scalable/apps/codex-ui-linux.svg" ]]; then
     install -m 644 "$PKGROOT/opt/codex-ui-linux-port/share/icons/hicolor/scalable/apps/codex-ui-linux.svg" "$target/usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg"
   fi
@@ -51,6 +54,12 @@ depend = nodejs
 depend = curl
 depend = jq
 depend = desktop-file-utils
+depend = pyside6
+depend = spectacle
+depend = tesseract
+depend = tesseract-data-eng
+depend = tesseract-data-spa
+depend = zbar
 EOF
 cp "$DIST/.PKGINFO" "$arch_root/.PKGINFO"
 (cd "$arch_root" && bsdtar --zstd -cf "$DIST/${NAME}-${VERSION}-1-${ARCH}.pkg.tar.zst" .PKGINFO opt usr)
@@ -65,7 +74,7 @@ Version: $VERSION
 Section: devel
 Priority: optional
 Architecture: amd64
-Depends: electron42, nodejs, curl, jq, desktop-file-utils
+Depends: electron42, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
 Maintainer: unofficial automation
 Description: Unofficial Codex UI Linux port
  Unofficial packaging automation for Codex UI.
@@ -92,6 +101,12 @@ Requires: nodejs
 Requires: curl
 Requires: jq
 Requires: desktop-file-utils
+Requires: python3-pyside6
+Requires: spectacle
+Requires: tesseract
+Requires: tesseract-langpack-eng
+Requires: tesseract-langpack-spa
+Requires: zbar
 
 %description
 Unofficial packaging automation for Codex UI.
@@ -109,7 +124,10 @@ tar -xzf %{_sourcedir}/${NAME}-${VERSION}-payload.tar.gz -C %{buildroot}
 /usr/bin/codex-ui-linux
 /usr/bin/codex-ui-update
 /usr/bin/codexui-update
+/usr/bin/codex-ui-tools
+/usr/lib/systemd/user/codex-ui-companion.service
 /usr/share/applications/codex-ui-linux.desktop
+/usr/share/applications/codex-ui-tools.desktop
 /usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg
 /usr/share/licenses/codex-ui-linux-port
 EOF

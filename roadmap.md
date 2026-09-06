@@ -8,6 +8,7 @@
 - Arch/CachyOS package is the primary supported target.
 - Debian and RPM packages are generated as experimental portability targets.
 - Release workflow validates source version, checksums, package names, and artifact completeness.
+- Packages ship an optional native companion for local usage, OCR, QR, and safe crash metadata.
 
 ## Next
 
@@ -33,6 +34,7 @@
 - El paquete Arch/CachyOS es el objetivo principal soportado.
 - Los paquetes Debian y RPM se generan como objetivos experimentales de portabilidad.
 - El workflow de release valida versión fuente, checksums, nombres de paquete e integridad de artefactos.
+- Los paquetes incluyen un companion nativo opcional para consumo local, OCR, QR y metadatos seguros de fallos.
 
 ## Próximo
 

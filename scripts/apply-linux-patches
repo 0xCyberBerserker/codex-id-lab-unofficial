@@ -7,8 +7,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_SRC="$INSTALL_ROOT/app-src"
 BUILD_NUMBER="$(node -e 'const p=require(process.argv[1]); process.stdout.write(String(p["codexBuildNumber"] || ""))' "$APP_SRC/package.json")"
 
-mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/share/icons/hicolor/scalable/apps"
+mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/share/icons/hicolor/scalable/apps" "$INSTALL_ROOT/share/systemd/user"
 install -m 644 "$SCRIPT_DIR/discord-rich-presence.js" "$INSTALL_ROOT/share/discord-rich-presence.js"
+install -m 755 "$SCRIPT_DIR/codex-ui-companion.py" "$INSTALL_ROOT/share/codex-ui-companion.py"
+install -m 644 "$SCRIPT_DIR/../resources/codex-ui-tools.desktop" "$INSTALL_ROOT/share/codex-ui-tools.desktop"
+install -m 644 "$SCRIPT_DIR/../resources/codex-ui-companion.service" "$INSTALL_ROOT/share/systemd/user/codex-ui-companion.service"
 
 cat > "$INSTALL_ROOT/bin/codex-cli-wrapper" <<'EOF'
 #!/usr/bin/env bash
@@ -82,7 +85,15 @@ fi
 exec "\$ELECTRON_BIN" "\${electron_args[@]}" "\$APP_ROOT/app-src" "\$@"
 EOF
 
-chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux"
+cat > "$INSTALL_ROOT/bin/codex-ui-tools" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+export CODEXUI_CODEX_COMMAND="${CODEXUI_CODEX_COMMAND:-/opt/codex-ui-linux-port/bin/codex-cli-wrapper}"
+exec /usr/bin/python3 /opt/codex-ui-linux-port/share/codex-ui-companion.py "$@"
+EOF
+
+chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux" "$INSTALL_ROOT/bin/codex-ui-tools"
 
 bootstrap_files=("$APP_SRC"/.vite/build/bootstrap.js "$APP_SRC"/.vite/build/bootstrap-*.js)
 for bootstrap_file in "${bootstrap_files[@]}"; do
@@ -276,12 +287,39 @@ cat > "$INSTALL_ROOT/share/codex-ui-linux.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=Codex UI
+Name[es]=Codex UI
 Comment=Codex UI Linux Port
+Comment[es]=Port de Codex UI para Linux
 Exec=codex-ui-linux %U
 Icon=codex-ui-linux
 Terminal=false
 Categories=Development;
 StartupNotify=true
+Actions=Usage;OCR;QR;Crashes;
+
+[Desktop Action Usage]
+Name=Codex usage
+Name[es]=Uso de Codex
+Exec=codex-ui-tools panel
+Icon=view-statistics
+
+[Desktop Action OCR]
+Name=Capture text (OCR)
+Name[es]=Capturar texto (OCR)
+Exec=codex-ui-tools ocr
+Icon=edit-select-text
+
+[Desktop Action QR]
+Name=Capture QR privately
+Name[es]=Capturar QR de forma privada
+Exec=codex-ui-tools qr
+Icon=view-barcode-qr
+
+[Desktop Action Crashes]
+Name=Crash reports
+Name[es]=Informes de fallos
+Exec=codex-ui-tools crashes
+Icon=tools-report-bug
 EOF
 
 cat > "$INSTALL_ROOT/share/icons/hicolor/scalable/apps/codex-ui-linux.svg" <<'EOF'

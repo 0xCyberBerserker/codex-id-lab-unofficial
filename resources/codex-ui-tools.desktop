@@ -1,0 +1,30 @@
+[Desktop Entry]
+Type=Application
+Name=Codex UI Tools
+Name[es]=Herramientas de Codex UI
+Comment=Local usage, capture and crash tools for Codex UI
+Comment[es]=Uso local, capturas e informes de fallos para Codex UI
+Exec=codex-ui-tools panel
+Icon=codex-ui-linux
+Terminal=false
+Categories=Development;
+StartupNotify=true
+Actions=OCR;QR;Crashes;
+
+[Desktop Action OCR]
+Name=Capture text (OCR)
+Name[es]=Capturar texto (OCR)
+Exec=codex-ui-tools ocr
+Icon=edit-select-text
+
+[Desktop Action QR]
+Name=Capture QR privately
+Name[es]=Capturar QR de forma privada
+Exec=codex-ui-tools qr
+Icon=view-barcode-qr
+
+[Desktop Action Crashes]
+Name=Crash reports
+Name[es]=Informes de fallos
+Exec=codex-ui-tools crashes
+Icon=tools-report-bug

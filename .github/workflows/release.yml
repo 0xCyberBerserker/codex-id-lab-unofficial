@@ -48,6 +48,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y p7zip-full nodejs npm jq curl dpkg-dev rpm patch zstd libarchive-tools ripgrep
 
+      - name: Test companion core
+        run: python3 -m unittest discover -s tests -v
+
       - name: Resolve source archive
         id: source
         env:
