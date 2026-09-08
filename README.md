@@ -51,7 +51,7 @@ Codex UI changes frequently. Linux users need a repeatable path that can:
 
 - fetch the current upstream source archive
 - rebuild native modules for Linux
-- apply Linux desktop patches, including audio-only microphone access for voice and dictation
+- apply Linux desktop patches, including audio-only microphone access and toggle-style global dictation
 - package the app for common Linux families
 - verify artifacts before release
 - keep private runtime data out of git
@@ -90,9 +90,15 @@ GitHub Actions is the authoritative builder.
 
 Every scheduled or manual run reads the latest version from the official appcast, downloads the current official `Codex.dmg`, verifies its internal application version, computes its SHA256, compares the source and Linux build-recipe fingerprints with the existing release manifest, and verifies every existing asset against `checksums.txt`. It rebuilds only when needed. If the same version tag exists but the source, Linux patches, packaging inputs, or any published artifact changed, release assets are refreshed with `--clobber`.
 
+### Automatic Feature Tracking
+
+Each run preserves upstream features and applies only the Linux compatibility patches. On Wayland, global dictation uses Electron's shortcut portal and a toggle shortcut. Automatic paste uses `ydotool`; X11 can also use `xdotool`. Hold-to-dictate stays hidden because Electron does not expose the global key-release event on Linux.
+
 ### Seguimiento automático de funciones
 
 Cada ejecución programada o manual obtiene el bundle oficial más reciente, conserva sus funciones upstream y aplica sólo los patches de compatibilidad necesarios para Linux, incluido el permiso exclusivo de audio para voz y dictado. La huella de la receta de build obliga a reconstruir una versión existente cuando cambian esos patches o sus inputs de empaquetado.
+
+En Wayland, el dictado global usa el portal de atajos de Electron y un atajo de tipo alternar. El pegado automático usa `ydotool`; en X11 también admite `xdotool`. El modo de mantener pulsado permanece oculto en Linux porque Electron no expone el evento global de liberación de tecla.
 
 Required release assets:
 

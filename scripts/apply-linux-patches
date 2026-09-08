@@ -62,6 +62,9 @@ locale_value="\${locale_value%%@*}"
 locale_value="\${locale_value//_/-}"
 
 electron_args=()
+if [[ "\${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+  electron_args+=(--enable-features=GlobalShortcutsPortal)
+fi
 if [[ -n "\$locale_value" && "\$locale_value" != "C" && "\$locale_value" != "POSIX" ]]; then
   electron_args+=(--lang="\$locale_value")
 fi
@@ -85,6 +88,24 @@ fi
 exec "\$ELECTRON_BIN" "\${electron_args[@]}" "\$APP_ROOT/app-src" "\$@"
 EOF
 
+cat > "$INSTALL_ROOT/bin/codex-ui-linux-paste" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]] && command -v ydotool >/dev/null 2>&1; then
+  exec ydotool key 29:1 47:1 47:0 29:0
+fi
+if command -v xdotool >/dev/null 2>&1; then
+  exec xdotool key --clearmodifiers ctrl+v
+fi
+if command -v ydotool >/dev/null 2>&1; then
+  exec ydotool key 29:1 47:1 47:0 29:0
+fi
+
+echo "codex-ui-linux-paste: install ydotool (Wayland) or xdotool (X11)" >&2
+exit 127
+EOF
+
 cat > "$INSTALL_ROOT/bin/codex-ui-tools" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -93,7 +114,15 @@ export CODEXUI_CODEX_COMMAND="${CODEXUI_CODEX_COMMAND:-/opt/codex-ui-linux-port/
 exec /usr/bin/python3 /opt/codex-ui-linux-port/share/codex-ui-companion.py "$@"
 EOF
 
-chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux" "$INSTALL_ROOT/bin/codex-ui-tools"
+chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux" "$INSTALL_ROOT/bin/codex-ui-linux-paste" "$INSTALL_ROOT/bin/codex-ui-tools"
+
+node - "$APP_SRC/package.json" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+const json = JSON.parse(fs.readFileSync(file, "utf8"));
+json.desktopName = "codex-ui-linux.desktop";
+fs.writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
+NODE
 
 bootstrap_files=("$APP_SRC"/.vite/build/bootstrap.js "$APP_SRC"/.vite/build/bootstrap-*.js)
 for bootstrap_file in "${bootstrap_files[@]}"; do
@@ -228,6 +257,7 @@ const fs = require("fs");
 const file = process.argv[2];
 let text = fs.readFileSync(file, "utf8");
 const audioPermissionMarker = "__codexUiLinuxAudioPermission";
+const globalDictationMarker = "__codexUiLinuxGlobalDictation";
 const exposesVoice = text.includes("/codex/dictation-stream-connect-info") || text.includes("realtime-voice-host-coordinator");
 if (exposesVoice && !text.includes(audioPermissionMarker)) {
   const restrictiveAppSession = /([A-Za-z_$][\w$]*)\.setPermissionRequestHandler\(\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)=>\{\4\(\3===`clipboard-sanitized-write`\)\}\),\1\.setPermissionCheckHandler\(\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)=>\6===`clipboard-sanitized-write`\)/;
@@ -239,10 +269,78 @@ if (exposesVoice && !text.includes(audioPermissionMarker)) {
   const replacement = `globalThis.${audioPermissionMarker}="audio-only",${session}.setPermissionRequestHandler((${requestWebContents},${requestPermission},${callback},codexUiDetails)=>{${callback}(${requestPermission}===\`clipboard-sanitized-write\`||${requestPermission}===\`media\`&&codexUiDetails?.mediaTypes?.length===1&&codexUiDetails.mediaTypes[0]===\`audio\`)}),${session}.setPermissionCheckHandler((${checkWebContents},${checkPermission},codexUiOrigin,codexUiDetails)=>${checkPermission}===\`clipboard-sanitized-write\`||${checkPermission}===\`media\`&&codexUiDetails?.mediaType===\`audio\`)`;
   text = text.replace(original, replacement);
 }
+if (exposesVoice && !text.includes(globalDictationMarker)) {
+  const platformGate = /function ([A-Za-z_$][\w$]*)\(\)\{return process\.platform===`darwin`\|\|process\.platform===`win32`\}/;
+  const platformGateMatch = text.match(platformGate);
+  if (!platformGateMatch) {
+    throw new Error(`unrecognized global dictation platform gate in ${file}`);
+  }
+  const platformGateName = platformGateMatch[1];
+  text = text.replace(
+    platformGate,
+    `globalThis.${globalDictationMarker}="toggle-only";function ${platformGateName}(){return process.platform===\`darwin\`||process.platform===\`win32\`||process.platform===\`linux\`}`,
+  );
+
+  const escapedPlatformGateName = platformGateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const holdSetter = new RegExp(`setHotkeyForMode\\(([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*)\\)\\{if\\(!${escapedPlatformGateName}\\(\\)\\|\\|!this\\.isGateEnabled\\)return this\\.createMutationFailure\\(\\\`Not supported\\.\\\`\\);`);
+  const holdSetterMatch = text.match(holdSetter);
+  if (!holdSetterMatch) {
+    throw new Error(`unrecognized global dictation hotkey setter in ${file}`);
+  }
+  const [, modeArgument, hotkeyArgument] = holdSetterMatch;
+  text = text.replace(
+    holdSetter,
+    `setHotkeyForMode(${modeArgument},${hotkeyArgument}){if(process.platform===\`linux\`&&${modeArgument}===\`hold\`&&${hotkeyArgument}!=null)return this.createMutationFailure(\`Hold-to-dictate is not supported on Linux. Use the toggle shortcut.\`);if(!${platformGateName}()||!this.isGateEnabled)return this.createMutationFailure(\`Not supported.\`);`,
+  );
+
+  const holdRegistration = "this.configuredHotkey==null?this.unregisterHotkey():this.registerHotkeyOrThrow(this.configuredHotkey,e)";
+  if (!text.includes(holdRegistration)) {
+    throw new Error(`unrecognized global dictation hold registration in ${file}`);
+  }
+  text = text.replace(
+    holdRegistration,
+    "process.platform===`linux`||this.configuredHotkey==null?this.unregisterHotkey():this.registerHotkeyOrThrow(this.configuredHotkey,e)",
+  );
+
+  const pasteFunctionStart = text.indexOf("async function RIe(){switch(process.platform)");
+  const pasteFunctionEnd = pasteFunctionStart === -1 ? -1 : text.indexOf("}}", pasteFunctionStart) + 2;
+  if (pasteFunctionStart === -1 || pasteFunctionEnd <= pasteFunctionStart) {
+    throw new Error(`unrecognized global dictation paste function in ${file}`);
+  }
+  const pasteFunction = text.slice(pasteFunctionStart, pasteFunctionEnd);
+  const unsupportedLinux = "case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)";
+  if (!pasteFunction.includes(unsupportedLinux)) {
+    throw new Error(`unrecognized global dictation Linux paste branch in ${file}`);
+  }
+  const patchedPasteFunction = pasteFunction.replace(
+    unsupportedLinux,
+    "case`linux`:await z7(`/opt/codex-ui-linux-port/bin/codex-ui-linux-paste`,[]);return;case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)",
+  );
+  text = text.slice(0, pasteFunctionStart) + patchedPasteFunction + text.slice(pasteFunctionEnd);
+}
 if (text.includes(".setPreferredLanguages(") && !text.includes(".setPreferredLanguages?.(")) {
   text = text.replaceAll(".setPreferredLanguages(", ".setPreferredLanguages?.(");
 }
 fs.writeFileSync(file, text, "utf8");
+NODE
+done
+
+voice_settings_assets=("$APP_SRC"/webview/assets/voice-settings-*.js)
+for voice_settings_asset in "${voice_settings_assets[@]}"; do
+  [[ -f "$voice_settings_asset" ]] || continue
+  node - "$voice_settings_asset" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+let text = fs.readFileSync(file, "utf8");
+const holdAndToggle = /children:\[\(0,([A-Za-z_$][\w$]*)\.jsx\)\(([A-Za-z_$][\w$]*),\{hotkeyState:([A-Za-z_$][\w$]*),mode:`hold`\}\),\(0,\1\.jsx\)\(\2,\{hotkeyState:\3,mode:`toggle`\}\)\]/;
+const holdAndToggleMatch = text.match(holdAndToggle);
+if (holdAndToggleMatch) {
+  const [, jsxNamespace, component, hotkeyState] = holdAndToggleMatch;
+  text = text.replace(holdAndToggle, `children:[(0,${jsxNamespace}.jsx)(${component},{hotkeyState:${hotkeyState},mode:\`toggle\`})]`);
+  fs.writeFileSync(file, text, "utf8");
+} else if (!/children:\[\(0,[A-Za-z_$][\w$]*\.jsx\)\([A-Za-z_$][\w$]*,\{hotkeyState:[A-Za-z_$][\w$]*,mode:`toggle`\}\)\]/.test(text) && text.includes("settings.voice.dictation.unsupported")) {
+  throw new Error(`unrecognized global dictation settings shape in ${file}`);
+}
 NODE
 done
 

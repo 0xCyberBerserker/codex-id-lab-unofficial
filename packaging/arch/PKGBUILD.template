@@ -6,6 +6,7 @@ arch=('x86_64')
 url="https://github.com/0xCyberBerserker/codex-ui-linux-port"
 license=('custom')
 depends=('electron42' 'nodejs' 'curl' 'jq' 'desktop-file-utils' 'pyside6' 'spectacle' 'tesseract' 'tesseract-data-eng' 'tesseract-data-spa' 'zbar')
+optdepends=('ydotool: automatic dictation paste on Wayland' 'xdotool: automatic dictation paste on X11')
 source=("${pkgname}-${pkgver}-1-x86_64.pkg.tar.zst")
 sha256sums=('@SHA256@')
 

@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Fixed
 
 - Voice chat and dictation now receive audio-only microphone permission from the Linux Electron session handler.
+- Global dictation now supports a safe toggle shortcut on Linux, with portal-backed Wayland registration and automatic paste through `ydotool` or `xdotool`.
 - Release freshness now includes the Linux build-recipe fingerprint, so patch changes rebuild an existing upstream version.
 - Companion shutdown now cancels its temporary Codex CLI query before waiting for the worker.
 - The companion now keeps its single-instance socket in the shared user runtime directory, including under `PrivateTmp`.
@@ -46,6 +47,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) y los 
 ### Corregido
 
 - El chat por voz y el dictado reciben ahora permiso exclusivo para el audio del micrófono desde el handler de sesión Electron para Linux.
+- El dictado global admite ahora un atajo alternable seguro en Linux, registrado mediante el portal de Wayland y con pegado automático mediante `ydotool` o `xdotool`.
 - La comprobación de vigencia de releases incluye ahora la huella de la receta de build para Linux, por lo que los cambios de patches reconstruyen una versión upstream ya existente.
 - El cierre del companion cancela la consulta temporal a Codex CLI antes de esperar al worker.
 - El companion mantiene ahora el socket de instancia única en el directorio runtime compartido del usuario, también con `PrivateTmp`.

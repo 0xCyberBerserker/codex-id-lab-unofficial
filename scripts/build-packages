@@ -60,6 +60,8 @@ depend = tesseract
 depend = tesseract-data-eng
 depend = tesseract-data-spa
 depend = zbar
+optdepend = ydotool: automatic dictation paste on Wayland
+optdepend = xdotool: automatic dictation paste on X11
 EOF
 cp "$DIST/.PKGINFO" "$arch_root/.PKGINFO"
 (cd "$arch_root" && bsdtar --zstd -cf "$DIST/${NAME}-${VERSION}-1-${ARCH}.pkg.tar.zst" .PKGINFO opt usr)
@@ -75,6 +77,7 @@ Section: devel
 Priority: optional
 Architecture: amd64
 Depends: electron42, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
+Suggests: ydotool, xdotool
 Maintainer: unofficial automation
 Description: Unofficial Codex UI Linux port
  Unofficial packaging automation for Codex UI.
@@ -107,6 +110,8 @@ Requires: tesseract
 Requires: tesseract-langpack-eng
 Requires: tesseract-langpack-spa
 Requires: zbar
+Recommends: ydotool
+Recommends: xdotool
 
 %description
 Unofficial packaging automation for Codex UI.
