@@ -51,7 +51,7 @@ Codex UI changes frequently. Linux users need a repeatable path that can:
 
 - fetch the current upstream source archive
 - rebuild native modules for Linux
-- apply Linux desktop patches
+- apply Linux desktop patches, including audio-only microphone access for voice and dictation
 - package the app for common Linux families
 - verify artifacts before release
 - keep private runtime data out of git
@@ -88,7 +88,11 @@ The legacy `codexui-update` command remains available as a compatibility alias a
 
 GitHub Actions is the authoritative builder.
 
-Every scheduled or manual run reads the latest version from the official appcast, downloads the current official `Codex.dmg`, verifies its internal application version, computes its SHA256, compares it with the existing release manifest, and verifies every existing asset against `checksums.txt`. It rebuilds only when needed. If the same version tag exists but the source or any published artifact changed, release assets are refreshed with `--clobber`.
+Every scheduled or manual run reads the latest version from the official appcast, downloads the current official `Codex.dmg`, verifies its internal application version, computes its SHA256, compares the source and Linux build-recipe fingerprints with the existing release manifest, and verifies every existing asset against `checksums.txt`. It rebuilds only when needed. If the same version tag exists but the source, Linux patches, packaging inputs, or any published artifact changed, release assets are refreshed with `--clobber`.
+
+### Seguimiento automático de funciones
+
+Cada ejecución programada o manual obtiene el bundle oficial más reciente, conserva sus funciones upstream y aplica sólo los patches de compatibilidad necesarios para Linux, incluido el permiso exclusivo de audio para voz y dictado. La huella de la receta de build obliga a reconstruir una versión existente cuando cambian esos patches o sus inputs de empaquetado.
 
 Required release assets:
 

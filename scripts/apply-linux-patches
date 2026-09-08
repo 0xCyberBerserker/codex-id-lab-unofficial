@@ -227,11 +227,33 @@ for main_file in "${main_files[@]}"; do
 const fs = require("fs");
 const file = process.argv[2];
 let text = fs.readFileSync(file, "utf8");
+const audioPermissionMarker = "__codexUiLinuxAudioPermission";
+const exposesVoice = text.includes("/codex/dictation-stream-connect-info") || text.includes("realtime-voice-host-coordinator");
+if (exposesVoice && !text.includes(audioPermissionMarker)) {
+  const restrictiveAppSession = /([A-Za-z_$][\w$]*)\.setPermissionRequestHandler\(\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)=>\{\4\(\3===`clipboard-sanitized-write`\)\}\),\1\.setPermissionCheckHandler\(\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)=>\6===`clipboard-sanitized-write`\)/;
+  const match = text.match(restrictiveAppSession);
+  if (!match) {
+    throw new Error(`unrecognized app-session permission handler in ${file}`);
+  }
+  const [original, session, requestWebContents, requestPermission, callback, checkWebContents, checkPermission] = match;
+  const replacement = `globalThis.${audioPermissionMarker}="audio-only",${session}.setPermissionRequestHandler((${requestWebContents},${requestPermission},${callback},codexUiDetails)=>{${callback}(${requestPermission}===\`clipboard-sanitized-write\`||${requestPermission}===\`media\`&&codexUiDetails?.mediaTypes?.length===1&&codexUiDetails.mediaTypes[0]===\`audio\`)}),${session}.setPermissionCheckHandler((${checkWebContents},${checkPermission},codexUiOrigin,codexUiDetails)=>${checkPermission}===\`clipboard-sanitized-write\`||${checkPermission}===\`media\`&&codexUiDetails?.mediaType===\`audio\`)`;
+  text = text.replace(original, replacement);
+}
 if (text.includes(".setPreferredLanguages(") && !text.includes(".setPreferredLanguages?.(")) {
   text = text.replaceAll(".setPreferredLanguages(", ".setPreferredLanguages?.(");
-  fs.writeFileSync(file, text, "utf8");
 }
+fs.writeFileSync(file, text, "utf8");
 NODE
+done
+
+voice_assets=("$APP_SRC"/webview/assets/dictation-audio-worklet-*.js "$APP_SRC"/webview/assets/realtime-voice-*.js)
+for voice_asset in "${voice_assets[@]}"; do
+  [[ -f "$voice_asset" ]] || continue
+  if ! grep -q "__codexUiLinuxAudioPermission" "${main_files[@]}" 2>/dev/null; then
+    echo "apply-linux-patches: upstream voice support found without a recognized audio permission handler" >&2
+    exit 1
+  fi
+  break
 done
 
 workspace_root_drop_handlers=("$APP_SRC"/.vite/build/workspace-root-drop-handler-*.js)

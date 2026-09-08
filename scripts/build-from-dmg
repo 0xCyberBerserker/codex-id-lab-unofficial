@@ -51,6 +51,7 @@ cp "$ROOT/tools/package.json" "$ROOT/tools/package-lock.json" "$tooling/"
 npm ci --prefix "$tooling" --omit=dev --ignore-scripts
 
 source_sha="$(sha256sum "$SOURCE" | awk '{print $1}')"
+build_recipe_sha="$("$ROOT/scripts/build-recipe-sha")"
 source_ext="${SOURCE%%\?*}"
 source_ext="${source_ext##*.}"
 case "$source_ext" in dmg|zip) ;; *) echo "build-from-dmg: unsupported source archive extension: $source_ext" >&2; exit 2 ;; esac
@@ -106,12 +107,14 @@ jq -n \
   --arg source_archive_file "$source_archive_file" \
   --arg source_archive_url "$SOURCE_URL" \
   --arg source_archive_sha256 "$source_sha" \
+  --arg build_recipe_sha256 "$build_recipe_sha" \
   --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   '{
     version: $version,
     sourceArchiveFile: $source_archive_file,
     sourceArchiveUrl: $source_archive_url,
     sourceArchiveSha256: $source_archive_sha256,
+    buildRecipeSha256: $build_recipe_sha256,
     generatedAtUtc: $generated_at_utc,
     packageName: "codex-ui-linux-port"
   }' > "$DIST/manifest.json"

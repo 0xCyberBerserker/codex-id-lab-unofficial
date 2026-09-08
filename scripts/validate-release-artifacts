@@ -41,15 +41,18 @@ if command -v jq >/dev/null 2>&1; then
   manifest_version="$(jq -r '.version // empty' "$DIST/manifest.json")"
   manifest_archive_file="$(jq -r '.sourceArchiveFile // .sourceDmgFile // empty' "$DIST/manifest.json")"
   manifest_archive_sha="$(jq -r '.sourceArchiveSha256 // .sourceDmgSha256 // empty' "$DIST/manifest.json")"
+  manifest_build_recipe_sha="$(jq -r '.buildRecipeSha256 // empty' "$DIST/manifest.json")"
 else
-  manifest_values="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write([p.version || "", p.sourceArchiveFile || p.sourceDmgFile || "", p.sourceArchiveSha256 || p.sourceDmgSha256 || ""].join("\n"))' "$DIST/manifest.json")"
+  manifest_values="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write([p.version || "", p.sourceArchiveFile || p.sourceDmgFile || "", p.sourceArchiveSha256 || p.sourceDmgSha256 || "", p.buildRecipeSha256 || ""].join("\n"))' "$DIST/manifest.json")"
   manifest_version="$(printf '%s\n' "$manifest_values" | sed -n '1p')"
   manifest_archive_file="$(printf '%s\n' "$manifest_values" | sed -n '2p')"
   manifest_archive_sha="$(printf '%s\n' "$manifest_values" | sed -n '3p')"
+  manifest_build_recipe_sha="$(printf '%s\n' "$manifest_values" | sed -n '4p')"
 fi
 
 [[ "$manifest_version" == "$VERSION" ]] || fail "manifest version mismatch: got '$manifest_version', expected '$VERSION'"
 [[ "$manifest_archive_file" == "$archive_file" ]] || fail "manifest source archive file mismatch: got '$manifest_archive_file'"
+[[ "$manifest_build_recipe_sha" =~ ^[0-9a-f]{64}$ ]] || fail "manifest build recipe SHA is missing or invalid"
 
 actual_archive_sha="$(sha256sum "$DIST/$archive_file" | awk '{print $1}')"
 [[ "$manifest_archive_sha" == "$actual_archive_sha" ]] || fail "manifest source archive SHA mismatch"

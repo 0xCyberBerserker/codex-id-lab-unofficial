@@ -30,6 +30,8 @@ Upstream appcast
 ## Components
 
 - `scripts/build-from-dmg`: extracts the official source asset, rebuilds native modules, applies Linux patches, and produces packages.
+- `scripts/build-recipe-sha`: fingerprints package-affecting inputs so a patch change rebuilds an existing upstream version.
+- `scripts/apply-linux-patches`: grants audio-only media permission to the trusted app session for upstream voice and dictation while retaining the existing denial for camera access.
 - `scripts/build-packages`: creates Arch, Debian, and RPM package outputs from a prepared package root.
 - `scripts/validate-release-artifacts`: validates the expected release asset set and checksums.
 - `scripts/codex-ui-update`: detects the host package manager, downloads the matching package, verifies checksums, installs, and can smoke-test.
@@ -58,6 +60,8 @@ Codex UI Linux Port es automatización de empaquetado alrededor de artefactos up
 ## Componentes
 
 - `scripts/build-from-dmg`: extrae el artefacto oficial, recompila módulos nativos, aplica patches Linux y produce paquetes.
+- `scripts/build-recipe-sha`: genera la huella de los inputs que afectan al paquete para que un cambio de patch reconstruya una versión upstream ya existente.
+- `scripts/apply-linux-patches`: concede a la sesión de confianza de la app permisos multimedia sólo para audio, habilitando voz y dictado upstream sin permitir acceso a la cámara.
 - `scripts/build-packages`: crea salidas Arch, Debian y RPM desde un package root preparado.
 - `scripts/validate-release-artifacts`: valida el conjunto esperado de assets de release y checksums.
 - `scripts/codex-ui-update`: detecta el gestor de paquetes del host, descarga el paquete compatible, verifica checksums, instala y puede ejecutar smoke test.
