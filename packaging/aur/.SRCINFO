@@ -1,7 +1,7 @@
 pkgbase = codex-id-lab-unofficial-bin
 	pkgdesc = Codex I+D Lab - Unofficial
 	pkgver = 26.908.40834
-	pkgrel = 2
+	pkgrel = 3
 	url = https://github.com/0xCyberBerserker/codex-id-lab-unofficial
 	arch = x86_64
 	license = custom
@@ -50,7 +50,7 @@ pkgbase = codex-id-lab-unofficial-bin
 	replaces = codex-ui-linux-port
 	options = !strip
 	options = !debug
-	source = codex-id-lab-unofficial-bin-26.908.40834-2-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v26.908.40834-2/codex-id-lab-unofficial-26.908.40834-2-x86_64.pkg.tar.zst
-	sha256sums = c98c97ba06e21fc1619f6b18c719162c9c6b77174b3d42f342667e284898d29f
+	source = codex-id-lab-unofficial-bin-26.908.40834-3-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v26.908.40834-3/codex-id-lab-unofficial-26.908.40834-3-x86_64.pkg.tar.zst
+	sha256sums = 168a0cd11f8154fd81aee97a77530a97581040368b6fae3cb4bda96fff4760f7
 
 pkgname = codex-id-lab-unofficial-bin

@@ -1,6 +1,6 @@
 pkgname=codex-id-lab-unofficial-bin
 pkgver=26.908.40834
-pkgrel=2
+pkgrel=3
 pkgdesc="Codex I+D Lab - Unofficial"
 arch=('x86_64')
 url="https://github.com/0xCyberBerserker/codex-id-lab-unofficial"
@@ -12,7 +12,7 @@ replaces=('codex-ui-linux-port')
 depends=('alsa-lib' 'at-spi2-core' 'cairo' 'cups' 'dbus' 'expat' 'gcc-libs' 'gdk-pixbuf2' 'glib2' 'gtk3' 'libdrm' 'libnotify' 'libusb' 'libx11' 'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'nodejs' 'curl' 'jq' 'github-cli' 'desktop-file-utils')
 optdepends=('pyside6: native Qt companion' 'spectacle: OCR and QR capture' 'tesseract: OCR' 'tesseract-data-eng: English OCR' 'tesseract-data-spa: Spanish OCR' 'zbar: QR decoding')
 source=("${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v${pkgver}-${pkgrel}/codex-id-lab-unofficial-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst")
-sha256sums=('c98c97ba06e21fc1619f6b18c719162c9c6b77174b3d42f342667e284898d29f')
+sha256sums=('168a0cd11f8154fd81aee97a77530a97581040368b6fae3cb4bda96fff4760f7')
 
 prepare() {
   local archive="${srcdir}/${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"
