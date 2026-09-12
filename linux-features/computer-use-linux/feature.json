@@ -1,0 +1,30 @@
+{
+  "id": "computer-use-linux",
+  "title": "computer-use-linux",
+  "description": "Disabled experimental integration preflight; not a stable feature.",
+  "defaultEnabled": false,
+  "lab": {
+    "capabilities": [
+      "screenshot",
+      "accessibility",
+      "input"
+    ],
+    "stability": "experimental",
+    "tests": [
+      "node --test tests/lab-features.test.js",
+      "node --test linux-features/computer-use-linux/native.test.js"
+    ],
+    "compatibility": {
+      "asarSha256": [
+        "6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"
+      ]
+    },
+    "source": {
+      "repository": "https://github.com/ilysenko/codex-desktop-linux",
+      "commit": "249cd4b64d42434f51417fec4a318750d461b676",
+      "license": "MIT",
+      "imported": true
+    },
+    "blockedReason": "Five main-bundle contracts and MIT transport/client tests pass. Native backend is not staged: its 23,783-line desktop implementation and transitive dependencies require separate audit/build/controlled acceptance. Transport fixtures do not prove screenshot, accessibility or input permissions."
+  }
+}

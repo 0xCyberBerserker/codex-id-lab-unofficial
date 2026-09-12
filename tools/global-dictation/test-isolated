@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+CACHE=${1:?Usage: test-isolated /tmp/isolated-cargo-cache}
+[[ "$CACHE" == /tmp/* && -d "$CACHE" && ! -L "$CACHE" ]] || { echo 'A private temporary Cargo cache is required' >&2; exit 1; }
+CACHE=$(realpath "$CACHE")
+[[ "$CACHE" == /tmp/* ]] || exit 1
+TOOLCHAIN=$(dirname "$(dirname "$(rustup which cargo)")")
+TARGET=${2:-$(mktemp -d /tmp/codex-lab-rust-target.XXXXXX)}
+[[ "$TARGET" == /tmp/* && -d "$TARGET" && ! -L "$TARGET" ]] || exit 1
+TARGET=$(realpath "$TARGET")
+[[ "$TARGET" == /tmp/* ]] || exit 1
+printf 'Isolated build target: %s\n' "$TARGET"
+ulimit -c 0
+# No personal home, desktop bus, network, credentials or writable host tree.
+exec bwrap --unshare-all --die-with-parent --new-session --ro-bind / / \
+  --tmpfs /home --tmpfs /root --tmpfs /run --tmpfs /tmp \
+  --ro-bind "$SOURCE" /tmp/source --ro-bind "$CACHE" /tmp/cargo-cache \
+  --ro-bind "$TOOLCHAIN" /tmp/toolchain --bind "$TARGET" /tmp/target \
+  --proc /proc --dev /dev --chdir /tmp/source --clearenv \
+  --setenv PATH /tmp/toolchain/bin:/usr/bin:/bin --setenv HOME /tmp \
+  --setenv CARGO_HOME /tmp/cargo-cache --setenv CARGO_TARGET_DIR /tmp/target \
+  --setenv LANG C.UTF-8 \
+  /bin/bash -c 'cargo test --locked --offline && cargo build --locked --offline --release'

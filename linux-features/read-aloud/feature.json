@@ -1,0 +1,15 @@
+{
+  "id": "read-aloud",
+  "title": "Read Aloud",
+  "description": "Experimental assistant-response button with a local espeak-ng backend; no model downloads.",
+  "defaultEnabled": false,
+  "entrypoints": {"patchDescriptors": "./runtime.js"},
+  "lab": {
+    "capabilities": ["user-requested-local-audio-playback"],
+    "stability": "experimental",
+    "tests": ["node --test tests/runtime-features.test.js"],
+    "compatibility": {"asarSha256": ["6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"]},
+    "optionalDependencies": ["espeak-ng"],
+    "blockers": ["Authenticated renderer roundtrip and audible playback have not been tested."]
+  }
+}
