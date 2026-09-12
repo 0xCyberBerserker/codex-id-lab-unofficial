@@ -1,7 +1,7 @@
 pkgbase = codex-id-lab-unofficial-bin
 	pkgdesc = Codex I+D Lab - Unofficial
 	pkgver = 26.908.40834
-	pkgrel = 3
+	pkgrel = 6
 	url = https://github.com/0xCyberBerserker/codex-id-lab-unofficial
 	arch = x86_64
 	license = custom
@@ -38,6 +38,7 @@ pkgbase = codex-id-lab-unofficial-bin
 	depends = github-cli
 	depends = desktop-file-utils
 	optdepends = pyside6: native Qt companion
+	optdepends = python-websockets>=15: experimental shared-authority companion bridge
 	optdepends = spectacle: OCR and QR capture
 	optdepends = tesseract: OCR
 	optdepends = tesseract-data-eng: English OCR
@@ -50,7 +51,7 @@ pkgbase = codex-id-lab-unofficial-bin
 	replaces = codex-ui-linux-port
 	options = !strip
 	options = !debug
-	source = codex-id-lab-unofficial-bin-26.908.40834-3-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v26.908.40834-3/codex-id-lab-unofficial-26.908.40834-3-x86_64.pkg.tar.zst
-	sha256sums = 168a0cd11f8154fd81aee97a77530a97581040368b6fae3cb4bda96fff4760f7
+	source = codex-id-lab-unofficial-bin-26.908.40834-6-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v26.908.40834-6/codex-id-lab-unofficial-26.908.40834-6-x86_64.pkg.tar.zst
+	sha256sums = 951d36e2977e7701839dc82c4a02a477bbae61a7b95ac45cf015bc72ee04c1ed
 
 pkgname = codex-id-lab-unofficial-bin

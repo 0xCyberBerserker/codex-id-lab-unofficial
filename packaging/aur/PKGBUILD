@@ -1,6 +1,6 @@
 pkgname=codex-id-lab-unofficial-bin
 pkgver=26.908.40834
-pkgrel=3
+pkgrel=6
 pkgdesc="Codex I+D Lab - Unofficial"
 arch=('x86_64')
 url="https://github.com/0xCyberBerserker/codex-id-lab-unofficial"
@@ -10,9 +10,9 @@ provides=('codex-id-lab-unofficial' 'codex-ui-linux-port')
 conflicts=('codex-id-lab-unofficial' 'codex-ui-linux-port')
 replaces=('codex-ui-linux-port')
 depends=('alsa-lib' 'at-spi2-core' 'cairo' 'cups' 'dbus' 'expat' 'gcc-libs' 'gdk-pixbuf2' 'glib2' 'gtk3' 'libdrm' 'libnotify' 'libusb' 'libx11' 'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'nodejs' 'curl' 'jq' 'github-cli' 'desktop-file-utils')
-optdepends=('pyside6: native Qt companion' 'spectacle: OCR and QR capture' 'tesseract: OCR' 'tesseract-data-eng: English OCR' 'tesseract-data-spa: Spanish OCR' 'zbar: QR decoding')
+optdepends=('pyside6: native Qt companion' 'python-websockets>=15: experimental shared-authority companion bridge' 'spectacle: OCR and QR capture' 'tesseract: OCR' 'tesseract-data-eng: English OCR' 'tesseract-data-spa: Spanish OCR' 'zbar: QR decoding')
 source=("${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v${pkgver}-${pkgrel}/codex-id-lab-unofficial-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst")
-sha256sums=('168a0cd11f8154fd81aee97a77530a97581040368b6fae3cb4bda96fff4760f7')
+sha256sums=('951d36e2977e7701839dc82c4a02a477bbae61a7b95ac45cf015bc72ee04c1ed')
 
 prepare() {
   local archive="${srcdir}/${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"

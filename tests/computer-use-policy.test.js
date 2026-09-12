@@ -16,7 +16,8 @@ test('native transport pins system PATH and portal-only capture despite ambient 
     });`;
   process.env.PATH = '/tmp/untrusted-executables';
   process.env.CODEX_COMPUTER_USE_SCREENSHOT_BACKEND = 'gnome-screenshot';
-  const service = createNativeService({command:process.execPath,args:['-e',source],timeoutMs:1000});
+  // This checks environment policy, not process-start latency under package builds.
+  const service = createNativeService({command:process.execPath,args:['-e',source],timeoutMs:5000});
   try {
     const result = await service.handleRpc({method:'press_key',app:'fixture',params:{key:'ESC'}});
     assert.equal(result.path, '/usr/bin:/bin');

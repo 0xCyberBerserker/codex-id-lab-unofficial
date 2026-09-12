@@ -28,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Fixed
 
+- RPM validation drains archive padding after the cpio trailer while retaining decoder and extractor failure checks.
 - Computer Use transport pins system executable paths and portal-only capture instead of inheriting an ambient CLI fallback; runtime activation remains disabled.
 - Recovery retries the journal's exact authenticated candidate, rejects changed digests and ambiguous journals, and does not remove native manager locks or perform global repair.
 - RPM forced recovery uses installation when the package is absent instead of assuming a previous transaction completed.
@@ -112,6 +113,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 
 ### Corregido
 
+- La validación RPM drena el padding posterior al cierre cpio y conserva la comprobación de errores del decodificador y del extractor.
 - El transporte Computer Use fija rutas del sistema y captura exclusivamente por portal; no hereda fallbacks CLI ambientales ni activa el runtime.
 - Recuperación del candidato exacto autenticado del journal, con rechazo de digests cambiados y registros ambiguos; sin borrar locks ni reparar globalmente el gestor.
 - Recuperación RPM forzada instala cuando el paquete está ausente, sin presuponer que terminó la transacción anterior.

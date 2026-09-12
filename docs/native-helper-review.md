@@ -46,7 +46,7 @@ lock entries excluded). The original upstream notice preserves its Apache/MIT
 licensing-transition statement and documentation terms; metadata alone was not
 treated as a complete rights grant.
 
-Native staging remains BLOCKED on focused backend security review and controlled
+Native staging remains BLOCKED on a sandbox-preserving integration and controlled
 positive screenshot/accessibility/input acceptance. Notice collection is not legal
 certification or proof of those capabilities. Development binaries are not shipped.
 Focused defensive review inspected command/process cancellation, target/PID
@@ -95,7 +95,7 @@ Los tres binarios release se compilaron y tienen los hashes de la tabla.
 La prueba real MCP comprueba inicialización, rechazo de capacidades ausentes,
 diagnóstico y ausencia de dispositivos; no acredita captura, accesibilidad ni
 input positivos. No se amplían permisos para aprobarla. Redistribución y staging
-siguen BLOCKED por revisión enfocada del backend y aceptación controlada positiva,
+siguen BLOCKED por integración que preserve el sandbox y aceptación controlada positiva,
 no por una declaración de paridad. Tras detectar ausencia de texto en rmcp y
 rmcp-macros 1.8.0, se conservó el aviso del commit exacto y se vinculó a checksum,
 licencia declarada, VCS y digest del texto. El colector recoge 182 paquetes Linux

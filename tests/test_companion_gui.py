@@ -91,7 +91,9 @@ class CompanionGuiTests(unittest.TestCase):
                            CODEX_LAB_LANG="es", CODEX_LAB_SHARED_APP_SERVER_SOCKET=endpoint,
                            CODEX_LAB_CODEX_COMMAND="/does-not-exist", CODEX_LAB_TEST_MODE="1",
                            CODEX_LAB_TEST_DISABLE_CRASH_WATCHER="1", CODEX_LAB_TEST_GUI_REPORT="1",
-                           CODEX_LAB_TEST_PALETTE="light", CODEX_LAB_TEST_QUIT_MS="600")
+                           # This checks completed IPC/UI state, not sub-second
+                           # startup latency while package compressors are busy.
+                           CODEX_LAB_TEST_PALETTE="light", CODEX_LAB_TEST_QUIT_MS="5000")
                 try:
                     result = subprocess.run([sys.executable, "-c", THEMED_RUNNER, str(ROOT / "scripts/codex-lab-companion.py"), "panel"],
                                             env=env, text=True, capture_output=True, timeout=10)
