@@ -37,6 +37,16 @@ and paste acceptance remain NOT_RUN. The binary is not included in stable packag
 Before redistribution, vendor applicable dependency license texts/notices,
 including Unicode-3.0 for unicode-ident, and complete the acceptance gates.
 
+License collection is deterministic and fail-closed. Generate a target-filtered
+graph with `cargo metadata --locked --offline --filter-platform
+x86_64-unknown-linux-gnu --manifest-path tools/global-dictation/Cargo.toml`, then
+pass its JSON as `--metadata PATH --target x86_64-unknown-linux-gnu` to
+`collect-licenses.py --cache PATH --output EMPTY_DIRECTORY`. The tracked inventory
+contains 74 reachable registry crates and explicitly records excluded lockfile
+packages (including UEFI-only r-efi). Checksums, Cargo metadata and notice texts
+are validated before writing. Dictation staging copies the notices and diagnoses
+their hashes. This is not legal certification or a complete source audit.
+
 ## Español
 
 Helper MIT y tests seleccionados del snapshot fijado de ilysenko. Solicita permisos
@@ -57,3 +67,14 @@ fresco. Micrófono, permisos/cancelación reales, transcripción autenticada, fo
 pega siguen NOT_RUN. No se incluye el binario en paquetes estables. Su futura
 redistribución exige textos/avisos de dependencias, incluido Unicode-3.0, y gates
 de aceptación completos.
+
+La recopilación de licencias es determinista y falla cerrada: verifica checksum,
+metadata Cargo y textos de cada crate fijado antes de escribir avisos en
+`third-party/global-dictation`. No constituye certificación legal ni auditoría
+completa del código fuente.
+
+El inventario fijado usa el grafo Linux alcanzable: 74 crates registry, con
+exclusiones explícitas del lockfile, incluido r-efi para UEFI. El comando anterior
+requiere metadata filtrada por target y un destino vacío; staging adjunta los
+avisos al helper y diagnóstico detecta modificaciones. No concede por sí solo
+aceptación funcional ni certificación legal.

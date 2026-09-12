@@ -17,8 +17,9 @@ an existing installed runtime in place.
 |---|---|---|
 | AppShots | MIT patches; known-ASAR staging and roundtrip; hotkeys excluded | Controlled capture, cancellation, insertion and backend permission |
 | Read Aloud | MIT webview + local espeak adapter; stdin/owned-stop fixture; actual ASAR | Authenticated renderer and audible playback |
-| Global dictation | Wayland-only ASAR adapter; native Rust helper; private D-Bus tests | Real portal permission, microphone, authenticated dictation and binary redistribution notices |
+| Global dictation | Wayland-only ASAR adapter; native Rust helper; private D-Bus tests; 74 dependency notice texts | Real portal permission, microphone and authenticated dictation |
 | Computer Use | Five main contracts match; MIT client/transport and 26 MCP fixture tests; no backend staged | Audited backend; separate capture/accessibility/input permission tests |
+| Shared authority | Opt-in MIT transport; private Unix ownership; real bundled CLI `/rpc` HTTP 101; known-ASAR staging | Authenticated desktop factory and companion task subscription |
 | Remote/mobile | Two main contracts match; no remote flags/network exposure | Account entitlement, keychain, consent, pairing and revocation |
 | Agent Workspace | Main bridge matches; no skill/installer hook | Audited helper and sandbox-preserving controlled acceptance |
 
@@ -47,6 +48,11 @@ dependency audit/build and explicit candidate staging. No helper is automaticall
 compiled, downloaded, launched or installed by the base profile.
 
 ## Español
+
+El puente de autoridad compartida es opt-in: valida socket privado, propiedad y
+overrides; el CLI real aislado responde HTTP 101 en `/rpc`. Tiene staging ASAR y
+diagnóstico, pero no demuestra aún observación de tareas del desktop. Consulta
+[el contrato y límites](../linux-features/shared-app-server-socket/README.md).
 
 El perfil base preserva ASAR upstream. Voz, dictado nativo y funciones de
 navegador/cuenta pertenecen al runtime oficial; empaquetarlo no concede privilegios

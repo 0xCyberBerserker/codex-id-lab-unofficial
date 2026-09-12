@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cli="$(realpath "${1:?explicit verified native CLI required}")"
+[[ -f "$cli" && -x "$cli" && ! -L "$1" ]] || exit 2
+for prerequisite in bwrap node timeout; do
+  command -v "$prerequisite" >/dev/null || { echo "shared-authority: NOT_RUN missing $prerequisite" >&2; exit 2; }
+done
+# No host account, home, network, desktop bus or model turn is used.
+timeout -k 5s 20s bwrap --unshare-all --die-with-parent --new-session \
+  --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /tmp --tmpfs /run \
+  --dev /dev --proc /proc --ro-bind "$repo" /tmp/repo --ro-bind "$cli" /tmp/native-cli \
+  --clearenv --setenv PATH /usr/bin --setenv HOME /tmp --setenv CODEX_HOME /tmp/codex \
+  --setenv CODEX_LAB_TEST_NATIVE_CLI /tmp/native-cli --setenv CODEX_LAB_TEST_NATIVE_ISOLATED 1 \
+  /usr/bin/node --test /tmp/repo/tests/shared-app-server.test.js

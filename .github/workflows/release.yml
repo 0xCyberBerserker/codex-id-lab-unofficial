@@ -44,7 +44,7 @@ jobs:
       - name: Test companion core
         run: |
           python3 -m unittest discover -s tests -v
-          node --test scripts/lib/linux-features.test.js tests/lab-features.test.js tests/runtime-features.test.js tests/global-dictation.test.js
+          node --test scripts/lib/linux-features.test.js tests/lab-features.test.js tests/runtime-features.test.js tests/global-dictation.test.js tests/shared-app-server.test.js
 
       - name: Resolve verified Linux source
         id: source
@@ -147,6 +147,7 @@ jobs:
         run: |
           TASK_SMOKE_CANDIDATE=$(mktemp -d /tmp/codex-lab-smoke.XXXXXX)
           cp -a build/work/pkgroot/opt/codex-id-lab-unofficial/. "$TASK_SMOKE_CANDIDATE/"
+          bash scripts/test-shared-authority "$TASK_SMOKE_CANDIDATE/resources/codex"
           scripts/smoke-linux-candidate "$TASK_SMOKE_CANDIDATE"
 
       - name: Privacy audit

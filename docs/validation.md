@@ -1,5 +1,24 @@
 # Validation boundaries
 
+## Shared authority and dependency notices — candidate revision 3
+
+`bash scripts/test-shared-authority VERIFIED_CLI` runs eight tests with personal
+homes, networking and desktop sockets masked. It includes the real signed CLI
+Unix `/rpc` HTTP 101 upgrade, but no authentication or model turn. Ordinary Node
+CI explicitly skips that one native fixture; the release build runs it after
+source verification. Known baseline ASAR staging and diagnosis also pass.
+The Cargo license collector validates the reachable Linux graph, checksums,
+unknown registry failures and exclusion inventory; native staging detects notice
+tampering. Candidate revision 2 remains the previous separately validated set,
+not evidence that revision 3 artifacts were rebuilt.
+
+El wrapper anterior ejecuta ocho tests aislados, incluido HTTP 101 del CLI real,
+sin cuenta ni turnos. CI unitario registra el skip del fixture nativo; el build de
+release lo ejecuta después de verificar el origen. Pasan staging y diagnóstico
+del ASAR conocido, así como checksums/grafo/exclusiones de licencias y detección
+de manipulación. El conjunto de revisión 2 conserva su evidencia previa; no
+demuestra por sí mismo que los artefactos de revisión 3 estén reconstruidos.
+
 Run locally:
 
 ```bash

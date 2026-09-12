@@ -9,6 +9,18 @@
       "licensePath": "third-party/ilysenko/LICENSE",
       "imports": [
         {
+          "source": "linux-features/shared-app-server-socket/patch.js",
+          "destination": "linux-features/shared-app-server-socket/patch.js",
+          "upstreamSha256": "e764943d87291075e4bdbda8602488c9307bdbd693f7e2a1150c5c884e3a90df",
+          "modifications": ["Added MIT attribution; private same-user runtime paths, bundled/absolute CLI, automatic namespaced socket, opaque override preservation and owned cleanup. Drains stderr without retaining diagnostics. Excludes SSH hooks, attached CLI command and global orphan reaper."]
+        },
+        {
+          "source": "linux-features/shared-app-server-socket/test.js",
+          "destination": "tests/shared-app-server.fixture.js",
+          "upstreamSha256": "a4827f331e50c846db72ecc86b84dbeba08e9e5efe200e59d971d4fb3aeaa07f",
+          "modifications": ["Selected fake child, VM transport loader and synthetic main bundle only; exposed Buffer for bounded Unix paths. Local lifecycle, staging and real isolated CLI tests are separate."]
+        },
+        {
           "source": "linux-features/computer-use-linux/native-service.mjs",
           "destination": "linux-features/computer-use-linux/native-service.mjs",
           "upstreamSha256": "3b7cb07cc7640aec56f6d638426ffd9f2500c30ed7ed6825c1e243ceb6b5fe5f",

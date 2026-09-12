@@ -42,6 +42,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Added
 
+- Opt-in private Unix shared authority transport with ordered configuration, owned cleanup, native CLI upgrade tests and reversible ASAR staging.
+- Target-filtered Cargo license inventory for 74 reachable Linux dependencies; dictation candidates preserve and diagnose notices alongside the helper.
+
 - Experimental AppShots and Read Aloud ASAR adapters, selectively attributed MIT webview/patch reuse, local stdin speech and owned-player stop fixtures.
 - Experimental Wayland global dictation adapter and MIT Rust portal helper, with corrected event-listener dependency, private D-Bus tests and fresh-build deactivation coverage.
 - Local-only signed-runtime AppImage recipe, real SquashFS/payload validation and isolated fixture entrypoint execution; redistribution/GUI gates remain blocked.
@@ -115,6 +118,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 - El actualizador elimina overrides obsoletos del lanzador de usuario tras conservar una copia si estaba personalizado, por lo que las actualizaciones del paquete llegan al menú de aplicaciones.
 
 ### Añadido
+
+- Transporte Unix privado opt-in de autoridad compartida, con configuración ordenada, limpieza propia, prueba nativa y staging ASAR reversible.
+- Inventario de licencias de las 74 dependencias Linux alcanzables; los candidatos de dictado adjuntan avisos y detectan su manipulación.
 
 - CI de push/PR sin publicación, validación mediante parsers reales y pruebas desechables de instalación, actualización y smoke de fixtures.
 - Framework Linux MIT y tests reutilizados selectivamente, con perfil base limitado a recursos y módulos runtime explícitos para candidatos.

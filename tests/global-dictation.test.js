@@ -107,9 +107,15 @@ test("actual candidate stages a hashed helper and disabling in a fresh build lea
     process.env.CODEX_LAB_GLOBAL_DICTATION_HELPER_SHA256 = crypto.createHash("sha256").update(fs.readFileSync(helper)).digest("hex");
     const runtime = await stageRuntime(app, ["global-dictation"]);
     assert.equal(runtime.nativeHelpers.length, 1);
+    assert.equal(runtime.nativeResources.length, 75);
     fs.mkdirSync(path.join(app, ".codex-linux"));
     fs.writeFileSync(path.join(app, ".codex-linux/build-info.json"), JSON.stringify({resources: [], runtime}));
     diagnose(app);
+    const notice = path.join(app, runtime.nativeResources[0].target);
+    const noticeBytes = fs.readFileSync(notice);
+    fs.appendFileSync(notice, "tampered");
+    assert.throws(() => diagnose(app), /Staged resource drift/);
+    fs.writeFileSync(notice, noticeBytes);
     fs.appendFileSync(path.join(app, runtime.nativeHelpers[0].target), "tampered");
     assert.throws(() => diagnose(app), /Staged resource drift/);
     await stageRuntime(fresh, []);

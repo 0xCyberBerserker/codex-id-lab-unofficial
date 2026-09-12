@@ -1,0 +1,2 @@
+# Preserve third-party license text formatting instead of rewriting notices.
+third-party/global-dictation/*.txt -whitespace

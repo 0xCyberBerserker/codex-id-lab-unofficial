@@ -1,0 +1,20 @@
+{
+  "id": "shared-app-server-socket",
+  "title": "shared-app-server-socket",
+  "description": "Experimental Desktop-owned private Unix WebSocket authority; not desktop task acceptance.",
+  "defaultEnabled": false,
+  "entrypoints": {"patchDescriptors": "patch.js"},
+  "lab": {
+    "capabilities": ["private-app-server-socket", "single-desktop-authority"],
+    "stability": "experimental",
+    "tests": ["node --test tests/shared-app-server.test.js"],
+    "compatibility": {"asarSha256": ["6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"]},
+    "source": {
+      "repository": "https://github.com/ilysenko/codex-desktop-linux",
+      "commit": "249cd4b64d42434f51417fec4a318750d461b676",
+      "license": "MIT",
+      "imported": true
+    },
+    "acceptancePending": "Stock signed CLI Unix /rpc upgrade and lifecycle fixtures pass; authenticated Desktop factory/companion task subscription acceptance is NOT_RUN. No SSH wrapper, attached CLI command or global orphan reaper."
+  }
+}

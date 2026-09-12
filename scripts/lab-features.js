@@ -61,7 +61,7 @@ function stage(appDir, profilePath, featuresRoot, allowRuntime = false) {
       throw new Error(`Upstream ASAR drift for enabled feature: ${feature.id}`);
     }
     const entrypoints = feature.manifest.entrypoints ?? {};
-    const runtimeEntrypoint = profile.runtimePatches && ["appshots", "read-aloud", "global-dictation"].includes(feature.id)
+    const runtimeEntrypoint = profile.runtimePatches && ["appshots", "read-aloud", "global-dictation", "shared-app-server-socket"].includes(feature.id)
       && Object.keys(entrypoints).length === 1 && typeof entrypoints.patchDescriptors === "string"
       && fs.realpathSync(feature.dir) === fs.realpathSync(path.join(__dirname, "../linux-features", feature.id));
     if ((Object.keys(entrypoints).length && !runtimeEntrypoint)
@@ -111,7 +111,7 @@ function stage(appDir, profilePath, featuresRoot, allowRuntime = false) {
 
 function diagnose(appDir) {
   const buildInfo = JSON.parse(fs.readFileSync(path.join(appDir, ".codex-linux", "build-info.json"), "utf8"));
-  for (const resource of [...buildInfo.resources, ...(buildInfo.runtime?.nativeHelpers ?? []).map(helper => ({...helper, id: "global-dictation"}))]) {
+  for (const resource of [...buildInfo.resources, ...[...(buildInfo.runtime?.nativeHelpers ?? []), ...(buildInfo.runtime?.nativeResources ?? [])].map(helper => ({...helper, id: "global-dictation"}))]) {
     const target = path.resolve(appDir, resource.target);
     if (!target.startsWith(path.resolve(appDir) + path.sep)
         || !fs.realpathSync(target).startsWith(fs.realpathSync(appDir) + path.sep)
@@ -129,10 +129,10 @@ async function experimentalStage(appDir, profilePath, featuresRoot) {
   const profile = readProfile(profilePath);
   if (!profile.runtimePatches || !profile.enabled.length) throw new Error("Experimental staging requires explicit nonempty runtime selection");
   if (process.env.CODEX_LAB_EXPERIMENTAL_CANDIDATE !== "1") throw new Error("Set CODEX_LAB_EXPERIMENTAL_CANDIDATE=1 for a disposable candidate, never an installed tree");
-  const resolved = fs.realpathSync(appDir);
-  if (resolved.startsWith("/opt/") || resolved.startsWith("/usr/")) throw new Error("Installed runtime trees are forbidden");
+  const adapter = require("./lab-runtime-features.js");
+  adapter.assertDisposableCandidate(appDir);
   const info = stage(appDir, profilePath, featuresRoot, true);
-  const runtime = await require("./lab-runtime-features.js").stageRuntime(appDir, info.linuxFeatures.enabled);
+  const runtime = await adapter.stageRuntime(appDir, info.linuxFeatures.enabled);
   info.runtime = runtime;
   fs.writeFileSync(path.join(appDir, ".codex-linux", "build-info.json"), JSON.stringify(info, null, 2) + "\n");
   return info;

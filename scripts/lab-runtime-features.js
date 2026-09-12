@@ -32,13 +32,27 @@ function patchSources(files, enabled) {
     } else if (feature === "global-dictation") {
       const module = require("../linux-features/global-dictation/patch.js");
       apply("global-dictation-main", /^\.vite\/build\/main-[^/]+\.js$/, module.applyLinuxGlobalDictationMainProcessPatch);
+    } else if (feature === "shared-app-server-socket") {
+      const module = require("../linux-features/shared-app-server-socket/patch.js");
+      apply("shared-app-server-main", /^\.vite\/build\/main-[^/]+\.js$/, module.applySharedAppServerSocketPatch);
     } else throw new Error(`Runtime adapter unavailable: ${feature}`);
   }
   return changes;
 }
 
+function assertDisposableCandidate(appDir) {
+  const resolved = fs.realpathSync(appDir);
+  if (!resolved.startsWith("/tmp/")) throw new Error("Runtime staging requires a disposable /tmp candidate");
+  const resources = path.join(resolved, "resources");
+  const archivePath = path.join(resources, "app.asar");
+  if (fs.realpathSync(resources) !== resources || !fs.lstatSync(archivePath).isFile()
+      || fs.lstatSync(archivePath).isSymbolicLink()) throw new Error("Candidate archive/resources must not contain symlinks");
+}
+
 async function stageRuntime(appDir, enabled) {
+  assertDisposableCandidate(appDir);
   let nativeHelper = null;
+  const nativeResources = [];
   if (enabled.includes("global-dictation")) {
     const source = process.env.CODEX_LAB_GLOBAL_DICTATION_HELPER;
     const expected = process.env.CODEX_LAB_GLOBAL_DICTATION_HELPER_SHA256;
@@ -49,6 +63,18 @@ async function stageRuntime(appDir, enabled) {
       throw new Error("Native dictation helper identity or permissions rejected");
     }
     nativeHelper = { source, sha256: expected };
+    const notices = path.join(__dirname, "../third-party/global-dictation");
+    const manifest = JSON.parse(fs.readFileSync(path.join(notices, "manifest.json"), "utf8"));
+    if (manifest.target !== "x86_64-unknown-linux-gnu" || !manifest.packages.length
+        || manifest.lockSha256 !== sha(path.join(__dirname, "../tools/global-dictation/Cargo.lock"))) {
+      throw new Error("Native helper license inventory does not match the locked Linux build");
+    }
+    for (const filename of ["manifest.json", ...manifest.packages.map(p => `${p.name}-${p.version}.txt`)]) {
+      if (path.basename(filename) !== filename || !fs.lstatSync(path.join(notices, filename)).isFile()) {
+        throw new Error("Unsafe native helper license resource");
+      }
+      nativeResources.push({source: path.join(notices, filename), target: `resources/native/licenses/${filename}`, sha256: sha(path.join(notices, filename))});
+    }
   }
   const archive = path.join(appDir, "resources", "app.asar");
   const asar = await import(pathToFileURL(path.join(__dirname, "../tools/asar-builder/node_modules/@electron/asar/lib/asar.js")));
@@ -96,14 +122,23 @@ async function stageRuntime(appDir, enabled) {
       fs.copyFileSync(nativeHelper.source, target, fs.constants.COPYFILE_EXCL);
       fs.chmodSync(target, 0o755);
       if (sha(target) !== nativeHelper.sha256) throw new Error("Native helper copy digest mismatch");
+      const licenses = path.join(directory, "licenses");
+      if (fs.existsSync(licenses)) throw new Error("Fresh candidate without native licenses is required");
+      fs.mkdirSync(licenses);
+      for (const resource of nativeResources) {
+        const destination = path.join(appDir, resource.target);
+        fs.copyFileSync(resource.source, destination, fs.constants.COPYFILE_EXCL);
+        fs.chmodSync(destination, 0o644);
+        if (sha(destination) !== resource.sha256) throw new Error("Native license copy digest mismatch");
+      }
     }
     // Candidate-only API. Installed package-manager trees must never be passed here.
     fs.copyFileSync(candidate, archive + ".candidate");
     if (fs.existsSync(candidate + ".unpacked")) fs.cpSync(candidate + ".unpacked", archive + ".unpacked", { recursive: true });
     fs.renameSync(archive + ".candidate", archive);
     asar.uncache(archive);
-    return { outputSha256, changes, ...(nativeHelper ? {nativeHelpers: [{target: "resources/native/codex-global-dictation-linux", sha256: nativeHelper.sha256}]} : {}), status: "patched-not-runtime-verified" };
+    return { outputSha256, changes, ...(nativeHelper ? {nativeHelpers: [{target: "resources/native/codex-global-dictation-linux", sha256: nativeHelper.sha256}], nativeResources: nativeResources.map(({target, sha256}) => ({target, sha256}))} : {}), status: "patched-not-runtime-verified" };
   } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
 }
 
-module.exports = { patchSources, stageRuntime };
+module.exports = { patchSources, stageRuntime, assertDisposableCandidate };
