@@ -28,6 +28,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Fixed
 
+- Recovery retries the journal's exact authenticated candidate, rejects changed digests and ambiguous journals, and does not remove native manager locks or perform global repair.
+- RPM forced recovery uses installation when the package is absent instead of assuming a previous transaction completed.
+
 - Native packages enforce root ownership; final payload digests cover updater files and exclude only the embedded identity manifest.
 - RPM post-processing no longer strips bundled upstream native binaries; real package comparisons cover the preserved payload.
 - Privacy scanning distinguishes the public `.codex-linux` namespace from private account directories while retaining secret/path detection.
@@ -106,6 +109,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 - Los paquetes exponen sólo comandos `codex-lab*`; la migración retira los wrappers de usuario `codex-ui*` obsoletos.
 
 ### Corregido
+
+- Recuperación del candidato exacto autenticado del journal, con rechazo de digests cambiados y registros ambiguos; sin borrar locks ni reparar globalmente el gestor.
+- Recuperación RPM forzada instala cuando el paquete está ausente, sin presuponer que terminó la transacción anterior.
 
 - Los paquetes nativos fuerzan propiedad root; el digest del payload incluye el updater y excluye sólo el manifiesto de identidad embebido.
 - El instalador autentica manifiestos, checksums y paquetes contra el workflow de release de la rama principal; omite tuplas idénticas, aplica revisiones nuevas y exige `--version` para downgrades.

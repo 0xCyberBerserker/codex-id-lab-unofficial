@@ -10,6 +10,9 @@ SMOKE=0
 WAIT_CLOSE=0
 ALLOW_PROFILE_CHANGE=0
 ACCEPT_DATA_DOWNGRADE_RISK=0
+RECOVER=0
+RECOVERY_IDENTITY=""
+RECOVERY_SHA=""
 REQUESTED_VERSION=""
 
 # Durable metadata contains only release identity, digest and transition, never credentials.
@@ -130,6 +133,59 @@ if [[ "${CODEX_LAB_COMPATIBILITY_TEST:-0}" == 1 ]]; then
   exit
 fi
 
+recovery_select() {
+  local record="$1"
+  [[ -f "$record" && ! -L "$record" && "$(stat -c %s "$record")" -le 16384 ]] || return 2
+  jq -ser '
+    select(length == 1) | .[0] |
+    select(type == "object" and .schemaVersion == 1 and
+      (.phase | IN("INSTALLING", "FAILED", "CANCELLED_OR_FAILED", "RECOVERY_BLOCKED", "VERIFIED", "DEFERRED")) and
+      (.packageVersion | type == "string" and test("^[0-9]{1,9}\\.[0-9]{1,9}\\.[0-9]{1,9}-[1-9][0-9]{0,8}$")) and
+      (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))) |
+    .packageVersion, .sha256
+  ' "$record"
+}
+
+recovery_match() {
+  [[ "$1" == "$3" && "$2" == "$4" ]]
+}
+
+manager_recovery_status() {
+  local kind="$1" database_root="${2:-/var/lib}" audit
+  case "$kind" in
+    pkg.tar.zst)
+      if [[ -e "$database_root/pacman/db.lck" || -L "$database_root/pacman/db.lck" ]]; then
+        echo pacman-lock-review-required
+      else
+        echo native-manager-validation-required
+      fi ;;
+    deb)
+      if ! command -v dpkg >/dev/null || ! command -v timeout >/dev/null; then
+        echo manager-probe-unavailable
+      elif ! audit="$(timeout 5s dpkg --audit "$PACKAGE_NAME" 2>/dev/null)" || [[ -n "$audit" ]]; then
+        echo dpkg-review-required
+      else
+        echo native-manager-validation-required
+      fi ;;
+    rpm) echo native-manager-validation-required ;;
+    *) echo manager-probe-unavailable ;;
+  esac
+}
+
+if [[ "${CODEX_LAB_RECOVERY_TEST:-0}" == 1 ]]; then
+  recovery_select "${CODEX_LAB_TEST_RECOVERY_STATE:?}"
+  exit
+fi
+if [[ "${CODEX_LAB_MANAGER_RECOVERY_TEST:-0}" == 1 ]]; then
+  manager_recovery_status "${CODEX_LAB_TEST_MANAGER_KIND:?}" "${CODEX_LAB_TEST_DATABASE_ROOT:?}"
+  exit
+fi
+if [[ "${CODEX_LAB_RECOVERY_MATCH_TEST:-0}" == 1 ]]; then
+  recovery_match "${CODEX_LAB_TEST_RECOVERY_IDENTITY:?}" "${CODEX_LAB_TEST_RECOVERY_SHA:?}" \
+    "${CODEX_LAB_TEST_REMOTE_IDENTITY:?}" "${CODEX_LAB_TEST_REMOTE_SHA:?}"
+  exit
+fi
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -141,6 +197,7 @@ Options:
   --doctor           Print local dependency/runtime diagnostics as JSON.
   --wait             Wait for the app to close before package-manager installation.
   --force            Reinstall the selected release.
+  --recover          Re-authenticate and retry the exact retained failed/deferred candidate.
   --version VERSION  Install a specific release tag/version.
   --allow-profile-change  Explicitly accept a changed build feature profile.
   --accept-data-downgrade-risk  Allow explicit package downgrade without restoring user data.
@@ -156,6 +213,7 @@ while [[ $# -gt 0 ]]; do
     --doctor) MODE="doctor" ;;
     --wait) WAIT_CLOSE=1 ;;
     --force) FORCE=1 ;;
+    --recover) RECOVER=1; FORCE=1 ;;
     --allow-profile-change) ALLOW_PROFILE_CHANGE=1 ;;
     --accept-data-downgrade-risk) ACCEPT_DATA_DOWNGRADE_RISK=1 ;;
     --version)
@@ -174,6 +232,11 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if [[ "$RECOVER" == 1 && ( "$MODE" != install || -n "$REQUESTED_VERSION" ) ]]; then
+  echo "$PROGRAM: --recover requires install mode without --version; its target comes from the journal" >&2
+  exit 2
+fi
+
 if [[ "$MODE" == status ]]; then
   if [[ -f "$update_state_dir/state.json" && ! -L "$update_state_dir/state.json" ]]; then
     jq '{schemaVersion,phase,packageVersion,sha256,updatedAt,rollback}' "$update_state_dir/state.json"
@@ -189,8 +252,22 @@ if [[ "$MODE" == doctor ]]; then
   done
   runtime_open=false
   runtime_is_open && runtime_open=true
+  manager_kind=unknown
+  if [[ -r /etc/os-release ]]; then
+    # The root-owned OS identity selects diagnostics, never an executable command.
+    manager_ids="$(sed -n 's/^\(ID\|ID_LIKE\)=//p' /etc/os-release | tr -d '\"')"
+    case " $manager_ids " in
+      *arch*|*cachyos*) manager_kind=pkg.tar.zst ;;
+      *debian*|*ubuntu*) manager_kind=deb ;;
+      *fedora*|*rhel*|*centos*) manager_kind=rpm ;;
+    esac
+  fi
+  manager_status="$(manager_recovery_status "$manager_kind")"
+  recovery_available=false
+  recovery_select "$update_state_dir/state.json" >/dev/null 2>&1 && recovery_available=true
   printf '%s\n' "${missing_commands[@]}" | jq -Rsc --argjson runtimeOpen "$runtime_open" \
-    '{schemaVersion:1,missingCommands:(split("\n")|map(select(length>0))),runtimeOpen:$runtimeOpen,taskProvider:"desktop-bridge-unavailable",channels:{stable:"attestation-required",beta:"blocked-unverified-origin"}}'
+    --arg managerStatus "$manager_status" --argjson recoveryAvailable "$recovery_available" \
+    '{schemaVersion:1,missingCommands:(split("\n")|map(select(length>0))),runtimeOpen:$runtimeOpen,recovery:{available:$recoveryAvailable,managerStatus:$managerStatus,automaticRepair:false,dataRestore:false},taskProvider:"desktop-bridge-unavailable",channels:{stable:"attestation-required",beta:"blocked-unverified-origin"}}'
   exit
 fi
 
@@ -225,6 +302,16 @@ need readlink
 need chmod
 need mv
 if [[ "$MODE" != check ]]; then update_lock; fi
+if [[ "$RECOVER" == 1 ]]; then
+  recovery_record="$(recovery_select "$update_state_dir/state.json")" || {
+    echo "$PROGRAM: no valid retained recovery identity; journal and candidate are unchanged" >&2
+    exit 2
+  }
+  mapfile -t recovery_fields <<< "$recovery_record"
+  RECOVERY_IDENTITY="${recovery_fields[0]}"
+  RECOVERY_SHA="${recovery_fields[1]}"
+  REQUESTED_VERSION="$RECOVERY_IDENTITY"
+fi
 
 sync_desktop_entry() {
   local system_dir="${CODEX_LAB_SYSTEM_APPLICATIONS_DIR:-${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}}"
@@ -357,7 +444,7 @@ case " $id $id_like " in
   *" fedora "*|*" rhel "*|*" centos "*)
     pkg_kind="rpm"
     deps=(alsa-lib at-spi2-core cairo cups-libs dbus-libs expat gtk3 libdrm libnotify libusb1 libX11 libxcb libXcomposite libXdamage libXext libXfixes libxkbcommon libXrandr mesa-libgbm nspr nss pango xdg-utils nodejs curl jq gh desktop-file-utils)
-    if [[ "$FORCE" -eq 1 ]]; then
+    if [[ "$FORCE" -eq 1 ]] && rpm -q "$PACKAGE_NAME" >/dev/null 2>&1; then
       install_cmd=(dnf reinstall -y)
     else
       install_cmd=(dnf install -y)
@@ -542,6 +629,10 @@ IFS=$'\t' read -r package_asset_id package_asset_name <<< "${package_assets[0]}"
 echo "$PROGRAM: downloading $package_asset_name from $REPO $tag"
 expected_cache_sha="$(jq -r --arg name "$package_asset_name" '.artifacts[]|select(.name==$name)|.sha256' "$tmpdir/manifest.json")"
 [[ "$expected_cache_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "$PROGRAM: invalid candidate digest" >&2; exit 1; }
+if [[ "$RECOVER" == 1 ]] && ! recovery_match "$RECOVERY_IDENTITY" "$RECOVERY_SHA" "$remote_package_version" "$expected_cache_sha"; then
+  echo "$PROGRAM: authenticated release no longer matches the retained recovery candidate; refusing replacement" >&2
+  exit 1
+fi
 cached_package="$update_cache_dir/$expected_cache_sha-$package_asset_name"
 if [[ -f "$cached_package" && ! -L "$cached_package" && "$(sha256sum "$cached_package" | awk '{print $1}')" == "$expected_cache_sha" ]]; then
   cp -- "$cached_package" "$tmpdir/$package_asset_name"
@@ -599,6 +690,14 @@ if runtime_is_open; then
 fi
 
 missing=()
+if [[ "$RECOVER" == 1 ]]; then
+  manager_status="$(manager_recovery_status "$pkg_kind")"
+  if [[ "$manager_status" != native-manager-validation-required ]]; then
+    state_write RECOVERY_BLOCKED "$remote_package_version" "$package_sha"
+    echo "$PROGRAM: $manager_status; inspect the native manager before explicit recovery. No lock removal or global repair attempted" >&2
+    exit 2
+  fi
+fi
 for dep in "${deps[@]}"; do
   case "$pkg_kind" in
     pkg.tar.zst) pacman -Qi "$dep" >/dev/null 2>&1 || missing+=("$dep") ;;
