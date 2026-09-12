@@ -10,8 +10,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 }
 
 mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/share/icons/hicolor/scalable/apps" "$INSTALL_ROOT/share/systemd/user"
+install -m 755 "$SCRIPT_DIR/codex-lab-install" "$INSTALL_ROOT/bin/codex-lab-install"
+ln -s codex-lab-install "$INSTALL_ROOT/bin/codex-lab-update"
 install -m 644 "$SCRIPT_DIR/discord-rich-presence.js" "$INSTALL_ROOT/share/discord-rich-presence.js"
 install -m 755 "$SCRIPT_DIR/codex-lab-companion.py" "$INSTALL_ROOT/share/codex-lab-companion.py"
+install -m 644 "$SCRIPT_DIR/codex_lab_account.py" "$INSTALL_ROOT/share/codex_lab_account.py"
+install -m 644 "$SCRIPT_DIR/codex_lab_features.py" "$INSTALL_ROOT/share/codex_lab_features.py"
+python3 - "$SCRIPT_DIR/../linux-features" "$INSTALL_ROOT/share/feature-catalog.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+root, output = map(Path, sys.argv[1:])
+Path(output).write_text(json.dumps([json.loads(path.read_text()) for path in sorted(root.glob("*/feature.json"))], indent=2) + "\n", encoding="utf-8")
+PY
 install -m 644 "$SCRIPT_DIR/../resources/codex-lab-tools.desktop" "$INSTALL_ROOT/share/codex-lab-tools.desktop"
 install -m 644 "$SCRIPT_DIR/../resources/codex-lab-companion.service" "$INSTALL_ROOT/share/systemd/user/codex-lab-companion.service"
 

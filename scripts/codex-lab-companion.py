@@ -6,19 +6,23 @@ from __future__ import annotations
 import argparse
 import json
 import locale
+import math
 import os
 from pathlib import Path
 import re
-import selectors
+import random
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
+
+from codex_lab_account import AccountCache, AccountClient
 
 
 APP_NAME = "Codex Lab Tools"
@@ -51,6 +55,10 @@ TEXT = {
         "updated": "Updated {time}",
         "error": "Could not read Codex usage",
         "used": "{value}% used",
+        "remaining": "{value}% remaining",
+        "tasks_unavailable": "Desktop task status unavailable: no verified bridge",
+        "account_changed": "Account changed; previous quota data was cleared",
+        "stale": "Last valid data is stale ({minutes} min old)",
         "resets": "Resets {time}",
         "no_reset": "Reset time unavailable",
         "primary": "primary",
@@ -72,7 +80,7 @@ TEXT = {
         "tray_quit": "Quit companion",
         "capture_cancelled": "Capture cancelled",
         "ocr_ready": "Text copied to the clipboard",
-        "qr_ready": "QR content copied privately to the clipboard",
+        "qr_ready": "QR content copied with a KDE history hint; other clipboard clients may still read it",
         "capture_error": "Capture failed",
         "missing_command": "Required command not found: {command}",
         "missing_ocr_language": "Install English or Spanish Tesseract language data",
@@ -110,6 +118,10 @@ TEXT = {
         "updated": "Actualizado a las {time}",
         "error": "No se pudo leer el uso de Codex",
         "used": "{value}% usado",
+        "remaining": "{value}% restante",
+        "tasks_unavailable": "Estado de tareas del desktop no disponible: falta un puente verificado",
+        "account_changed": "La cuenta ha cambiado; se han descartado sus cuotas anteriores",
+        "stale": "Último dato válido obsoleto ({minutes} min de antigüedad)",
         "resets": "Se reinicia el {time}",
         "no_reset": "Hora de reinicio no disponible",
         "primary": "principal",
@@ -131,7 +143,7 @@ TEXT = {
         "tray_quit": "Cerrar el compañero",
         "capture_cancelled": "Captura cancelada",
         "ocr_ready": "Texto copiado al portapapeles",
-        "qr_ready": "Contenido QR copiado de forma privada al portapapeles",
+        "qr_ready": "QR copiado con una indicación para el historial KDE; otros clientes aún pueden leerlo",
         "capture_error": "La captura ha fallado",
         "missing_command": "No se encontró el comando necesario: {command}",
         "missing_ocr_language": "Instala los datos de idioma inglés o español de Tesseract",
@@ -161,10 +173,86 @@ TEXT = {
 }
 
 
+TEXT["ca"] = {
+    "title": "Ús de Codex",
+    "usage_limits": "Límits d'ús",
+    "activity": "Activitat",
+    "refresh": "Actualitza",
+    "open_codex": "Obre Codex",
+    "close": "Tanca",
+    "loading": "Llegint les dades locals del compte...",
+    "updated": "Actualitzat a les {time}",
+    "error": "No s'ha pogut llegir l'ús de Codex",
+    "used": "{value}% utilitzat",
+    "remaining": "{value}% restant",
+    "tasks_unavailable": "Estat de les tasques del desktop no disponible: manca un pont verificat",
+    "account_changed": "El compte ha canviat; s'han descartat les quotes anteriors",
+    "stale": "Última dada vàlida obsoleta ({minutes} min d'antiguitat)",
+    "resets": "Es reinicia el {time}",
+    "no_reset": "Hora de reinici no disponible",
+    "primary": "principal",
+    "secondary": "secundari",
+    "period_minutes": "{value} min",
+    "period_hours": "{value} h",
+    "period_days": "{value} dies",
+    "latest_day": "Últim dia registrat",
+    "lifetime": "Tokens acumulats",
+    "current_streak": "Ratxa actual",
+    "longest_streak": "Ratxa més llarga",
+    "days": "{value} dies",
+    "reset_credits": "Reinicis complets disponibles",
+    "unknown": "No disponible",
+    "tray_usage": "Ús de Codex",
+    "tray_ocr": "Captura text (OCR)",
+    "tray_qr": "Captura QR",
+    "tray_crashes": "Informes d'errors",
+    "tray_quit": "Tanca el companion",
+    "capture_cancelled": "Captura cancel·lada",
+    "ocr_ready": "Text copiat al porta-retalls",
+    "qr_ready": "QR copiat amb una indicació per a l'historial KDE; altres clients encara el poden llegir",
+    "capture_error": "La captura ha fallat",
+    "missing_command": "No s'ha trobat l'ordre necessària: {command}",
+    "missing_ocr_language": "Instal·la les dades d'anglès o espanyol de Tesseract",
+    "no_text": "No s'ha detectat text",
+    "no_qr": "No s'ha detectat cap codi QR",
+    "crash_title": "S'ha detectat un error d'aplicació",
+    "crash_body": "{process} ha fallat. Prem la notificació per revisar metadades segures.",
+    "crash_report_title": "Informe de metadades d'error d'aplicació",
+    "crash_privacy": "S'exclouen el contingut del core, les variables d'entorn i els arguments d'execució.",
+    "crash_time": "Detectat el",
+    "journal_time": "Marca temporal del registre",
+    "field_process": "Procés",
+    "field_executable": "Executable",
+    "field_pid": "PID",
+    "field_uid": "UID",
+    "field_gid": "GID",
+    "field_signal": "Senyal",
+    "field_signal_number": "Número de senyal",
+    "field_system_unit": "Unitat del sistema",
+    "field_user_unit": "Unitat d'usuari",
+    "field_package": "Paquet",
+    "field_package_version": "Versió del paquet",
+    "field_boot_id": "ID d'arrencada",
+    "crash_reports_missing": "Encara no hi ha informes d'errors",
+    "brand": "Made with 🖤 in Barcelona City 🇪🇸",
+}
+
+
+for code, labels in {
+    "en": ("Linux features", "Save preferences", "Preferences saved; rebuild required. No installed runtime was changed.", "Experimental opt-in features. Saving does not install, grant permissions or rebuild.", "disabled", "enabled", "pending rebuild", "incompatible"),
+    "es": ("Funciones Linux", "Guardar preferencias", "Preferencias guardadas; requieren rebuild. El runtime instalado no cambia.", "Funciones experimentales opt-in. Guardar no instala, concede permisos ni reconstruye.", "deshabilitada", "habilitada", "rebuild pendiente", "incompatible"),
+    "ca": ("Funcions Linux", "Desar preferències", "Preferències desades; cal rebuild. El runtime instal·lat no canvia.", "Funcions experimentals opt-in. Desar no instal·la, concedeix permisos ni reconstrueix.", "desactivada", "activada", "rebuild pendent", "incompatible"),
+}.items():
+    TEXT[code].update(zip(("features_title", "features_save", "features_saved", "features_hint", "feature_disabled", "feature_enabled", "feature_pending-rebuild", "feature_incompatible"), labels))
+
+
 def language() -> str:
     configured = os.environ.get("CODEX_LAB_LANG", os.environ.get("CODEXUI_LANG", ""))
     current = configured or locale.getlocale()[0] or os.environ.get("LANG", "en")
-    return "es" if current.lower().startswith("es") else "en"
+    for supported in ("es", "ca"):
+        if current.lower().startswith(supported):
+            return supported
+    return "en"
 
 
 def tr(key: str, **values: Any) -> str:
@@ -195,110 +283,82 @@ def query_codex_account(
         "app-server",
         "--stdio",
     ]
-    process = subprocess.Popen(
-        command,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
-    )
-    requests = (
-        {
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "clientInfo": {"name": "codex-id-lab-unofficial", "version": APP_VERSION},
-                "capabilities": {"experimentalApi": True},
-            },
-        },
-        {"method": "initialized", "params": {}},
-        {"id": 2, "method": "account/usage/read", "params": None},
-        {"id": 3, "method": "account/rateLimits/read", "params": None},
-    )
-    responses: dict[int, dict[str, Any]] = {}
-    error_text = ""
-    selector: selectors.BaseSelector | None = None
+    client = AccountClient(command, cancelled)
+    generation = [0]
+    def notification(method: str, params: dict[str, Any]) -> None:
+        if method == "account/updated":
+            generation[0] += 1
+    client.notification = notification
     try:
-        assert process.stdin is not None
-        assert process.stdout is not None
-        for request in requests:
-            process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
-        process.stdin.flush()
-
-        selector = selectors.DefaultSelector()
-        selector.register(process.stdout, selectors.EVENT_READ)
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline and not {1, 2, 3}.issubset(responses):
-            if cancelled and cancelled():
-                raise RuntimeError("Codex usage read cancelled")
-            for key, _ in selector.select(timeout=0.25):
-                line = key.fileobj.readline()
-                if not line:
-                    break
-                message = json.loads(line)
-                request_id = message.get("id")
-                if isinstance(request_id, int):
-                    responses[request_id] = message
-        if not {2, 3}.issubset(responses):
-            raise RuntimeError("Codex app-server timed out")
-        for request_id in (2, 3):
-            if "error" in responses[request_id]:
-                raise RuntimeError(str(responses[request_id]["error"]))
-        return normalize_account_data(responses[2]["result"], responses[3]["result"])
-    finally:
-        if selector is not None:
-            selector.close()
-        if process.stdin is not None:
-            process.stdin.close()
-        if process.poll() is None:
-            process.terminate()
+        client.start(timeout)
+        current_generation = generation[0]
+        limits = client.request("account/rateLimits/read", timeout=timeout)
         try:
-            process.wait(timeout=1)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=1)
-        if process.stderr is not None:
-            error_text = process.stderr.read().strip()
-            process.stderr.close()
-        if process.stdout is not None:
-            process.stdout.close()
-        if process.returncode not in (0, -15) and error_text and not responses:
-            raise RuntimeError(error_text[-600:])
+            usage = client.request("account/usage/read", timeout=timeout)
+            usage_status = "available"
+        except RuntimeError:
+            if cancelled and cancelled():
+                raise
+            usage = {}
+            usage_status = "unavailable"
+        if generation[0] != current_generation:
+            raise RuntimeError("Account changed during quota refresh")
+        data = normalize_account_data(usage, limits)
+        data["usage_status"] = usage_status
+        return data
+    finally:
+        client.close()
 
 
 def normalize_account_data(
     usage_result: dict[str, Any], limits_result: dict[str, Any]
 ) -> dict[str, Any]:
     snapshots = limits_result.get("rateLimitsByLimitId") or {}
-    if not snapshots and limits_result.get("rateLimits"):
+    if not isinstance(snapshots, dict):
+        snapshots = {}
+    if not snapshots and isinstance(limits_result.get("rateLimits"), dict):
         snapshot = limits_result["rateLimits"]
         snapshots = {snapshot.get("limitId") or "codex": snapshot}
 
     limits: list[dict[str, Any]] = []
     ordered_snapshots = sorted(
         snapshots.items(),
-        key=lambda item: (item[0] != "codex", str(item[1].get("limitName") or item[0]).lower()),
+        key=lambda item: (item[0] != "codex", str((item[1] if isinstance(item[1], dict) else {}).get("limitName") or item[0]).lower()),
     )
     for limit_id, snapshot in ordered_snapshots:
+        if not isinstance(snapshot, dict):
+            continue
         name = snapshot.get("limitName") or ("Codex" if limit_id == "codex" else limit_id)
         for kind in ("primary", "secondary"):
             window = snapshot.get(kind)
-            if not window:
+            if not isinstance(window, dict):
                 continue
+            used = window.get("usedPercent")
+            if isinstance(used, bool) or not isinstance(used, (int, float)) or not 0 <= used <= 100 or not math.isfinite(used):
+                used = None
             limits.append(
                 {
+                    "bucket_id": str(snapshot.get("limitId") or limit_id),
                     "name": str(name),
                     "kind": kind,
-                    "used_percent": max(0, min(100, int(window.get("usedPercent", 0)))),
+                    "used_percent": used,
+                    "remaining_percent": 100 - used if used is not None else None,
                     "window_minutes": window.get("windowDurationMins"),
                     "resets_at": window.get("resetsAt"),
+                    "rate_limit_reached_type": snapshot.get("rateLimitReachedType"),
                 }
             )
 
     buckets = usage_result.get("dailyUsageBuckets") or []
+    buckets = [row for row in buckets if isinstance(row, dict) and isinstance(row.get("startDate"), str)] if isinstance(buckets, list) else []
     latest = max(buckets, key=lambda row: row.get("startDate", ""), default=None)
     summary = usage_result.get("summary") or {}
+    if not isinstance(summary, dict):
+        summary = {}
+    credits = limits_result.get("rateLimitResetCredits") or {}
+    reset_credits = credits.get("availableCount") if isinstance(credits, dict) else None
+    if isinstance(reset_credits, bool) or not isinstance(reset_credits, int) or reset_credits < 0:
+        reset_credits = None
     return {
         "limits": limits,
         "activity": {
@@ -308,13 +368,14 @@ def normalize_account_data(
             "current_streak_days": summary.get("currentStreakDays"),
             "longest_streak_days": summary.get("longestStreakDays"),
         },
-        "reset_credits": int((limits_result.get("rateLimitResetCredits") or {}).get("availableCount", 0)),
+        "reset_credits": reset_credits,
+        "tasks": {"status": "desktop-provider-unavailable", "items": []},
         "updated_at": int(time.time()),
     }
 
 
 def compact_number(value: Any) -> str:
-    if value is None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or (isinstance(value, float) and not math.isfinite(value)):
         return tr("unknown")
     number = int(value)
     for threshold, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
@@ -324,7 +385,7 @@ def compact_number(value: Any) -> str:
 
 
 def period_text(minutes: Any) -> str:
-    if not isinstance(minutes, int):
+    if isinstance(minutes, bool) or not isinstance(minutes, (int, float)) or minutes <= 0 or (isinstance(minutes, float) and not math.isfinite(minutes)):
         return tr("unknown")
     if minutes % 1440 == 0:
         return tr("period_days", value=minutes // 1440)
@@ -334,10 +395,30 @@ def period_text(minutes: Any) -> str:
 
 
 def reset_text(timestamp: Any) -> str:
-    if not isinstance(timestamp, int):
+    if isinstance(timestamp, bool) or not isinstance(timestamp, (int, float)) or not 0 <= timestamp <= 253402300799:
         return tr("no_reset")
-    rendered = datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %H:%M")
+    try:
+        rendered = datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %H:%M")
+    except (OverflowError, OSError, ValueError):
+        return tr("no_reset")
     return tr("resets", time=rendered)
+
+
+def popup_geometry(
+    available: tuple[int, int, int, int],
+    requested: tuple[int, int],
+    anchor: tuple[int, int] | None = None,
+) -> tuple[int, int, int, int]:
+    left, top, screen_width, screen_height = available
+    width = min(requested[0], screen_width)
+    height = min(requested[1], screen_height)
+    x = anchor[0] - width // 2 if anchor else left + (screen_width - width) // 2
+    y = anchor[1] - height if anchor else top + (screen_height - height) // 2
+    return max(left, min(x, left + screen_width - width)), max(top, min(y, top + screen_height - height)), width, height
+
+
+def account_snapshot_signature(data: dict[str, Any]) -> str:
+    return json.dumps({key: value for key, value in data.items() if key != "updated_at"}, sort_keys=True)
 
 
 def crash_report(event: dict[str, Any], detected_at: datetime | None = None) -> str:
@@ -403,7 +484,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "command",
         nargs="?",
         default="panel",
-        choices=("tray", "panel", "usage-json", "ocr", "qr", "crashes"),
+        choices=("tray", "panel", "usage-json", "features", "features-json", "feature-profile-json", "ocr", "qr", "crashes"),
     )
     return parser.parse_args(argv)
 
@@ -411,10 +492,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def run_gui(command: str) -> int:
     try:
         from PySide6.QtCore import QByteArray, QMimeData, QObject, QProcess, Qt, QThread, QTimer, QUrl, Signal, Slot
-        from PySide6.QtGui import QAction, QDesktopServices, QIcon
+        from PySide6.QtGui import QAction, QDesktopServices, QIcon, QPalette
         from PySide6.QtNetwork import QLocalServer, QLocalSocket
         from PySide6.QtWidgets import (
             QApplication,
+            QCheckBox,
             QDialog,
             QFrame,
             QGridLayout,
@@ -423,6 +505,7 @@ def run_gui(command: str) -> int:
             QMenu,
             QMessageBox,
             QProgressBar,
+            QScrollArea,
             QPushButton,
             QStyle,
             QSystemTrayIcon,
@@ -469,12 +552,91 @@ def run_gui(command: str) -> int:
     class UsageWorker(QThread):
         succeeded = Signal(dict)
         failed = Signal(str)
+        account_invalidated = Signal()
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.refresh_event = threading.Event()
+            self.refresh_event.set()
+
+        def request_refresh(self) -> None:
+            self.refresh_event.set()
 
         def run(self) -> None:
             try:
-                self.succeeded.emit(query_codex_account(cancelled=self.isInterruptionRequested))
-            except Exception as error:  # noqa: BLE001 - surfaced in the local UI
+                command_line = codex_command() + ["-s", "read-only", "-a", "on-request", "app-server", "--stdio"]
+            except Exception as error:
                 self.failed.emit(str(error))
+                return
+            backoff = 1.0
+            while not self.isInterruptionRequested():
+                client = AccountClient(
+                    command_line,
+                    self.isInterruptionRequested,
+                )
+                state: dict[str, Any] = {"usage": {}, "limits": None, "generation": 0, "signature": None, "usage_status": "unavailable"}
+
+                def publish(force: bool = False) -> None:
+                    if state["limits"] is None:
+                        return
+                    data = normalize_account_data(state["usage"], state["limits"])
+                    data["usage_status"] = state["usage_status"]
+                    signature = account_snapshot_signature(data)
+                    if force or signature != state["signature"]:
+                        state["signature"] = signature
+                        self.succeeded.emit(data)
+
+                def notification(method: str, params: dict[str, Any]) -> None:
+                    if method == "account/updated":
+                        state.update(usage={}, limits=None, signature=None, usage_status="unavailable")
+                        state["generation"] += 1
+                        self.account_invalidated.emit()
+                        self.refresh_event.set()
+                    else:
+                        state["limits"] = params
+                        publish()
+
+                client.notification = notification
+                try:
+                    client.start()
+                    next_refresh = time.monotonic()
+                    while not self.isInterruptionRequested():
+                        if self.refresh_event.is_set() or time.monotonic() >= next_refresh:
+                            self.refresh_event.clear()
+                            generation = state["generation"]
+                            limits = client.request("account/rateLimits/read")
+                            if generation != state["generation"]:
+                                self.refresh_event.set()
+                                continue
+                            state["limits"] = limits
+                            publish(force=True)
+                            backoff = 1.0
+                            try:
+                                usage = client.request("account/usage/read")
+                                usage_status = "available"
+                            except RuntimeError:
+                                if self.isInterruptionRequested():
+                                    raise
+                                usage = {}
+                                usage_status = "unavailable"
+                            if generation != state["generation"]:
+                                self.refresh_event.set()
+                                continue
+                            state.update(usage=usage, usage_status=usage_status)
+                            publish()
+                            next_refresh = time.monotonic() + 300 * random.uniform(0.9, 1.1)
+                        client.read_messages(0.25)
+                except Exception as error:  # noqa: BLE001 - bounded reconnection; no auth prompts
+                    if not self.isInterruptionRequested():
+                        self.failed.emit(str(error))
+                        next_attempt = time.monotonic() + backoff * random.uniform(0.9, 1.1)
+                        while not self.isInterruptionRequested() and time.monotonic() < next_attempt:
+                            if self.refresh_event.wait(0.25):
+                                self.refresh_event.clear()
+                                break
+                        backoff = min(backoff * 2, 300)
+                finally:
+                    client.close()
 
     class CrashWatcher(QThread):
         crash_detected = Signal(dict)
@@ -525,9 +687,10 @@ def run_gui(command: str) -> int:
         def __init__(self) -> None:
             super().__init__()
             self.setWindowTitle(tr("title"))
+            self.setObjectName("usagePanel")
             self.setWindowIcon(app_icon())
-            self.setMinimumSize(520, 470)
-            self.resize(560, 520)
+            self.setMinimumSize(360, 420)
+            self.resize(400, 480)
 
             root = QVBoxLayout(self)
             root.setContentsMargins(20, 18, 20, 14)
@@ -549,9 +712,25 @@ def run_gui(command: str) -> int:
             header.addWidget(self.refresh_button)
             root.addLayout(header)
 
+            outer_root = root
+            body = QWidget()
+            root = QVBoxLayout(body)
+            root.setContentsMargins(0, 0, 0, 0)
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setWidget(body)
+            outer_root.addWidget(scroll)
+
             self.status = QLabel(tr("loading"))
+            self.status.setObjectName("usageStatus")
             self.status.setWordWrap(True)
             root.addWidget(self.status)
+            self.tasks_status = QLabel(tr("tasks_unavailable"))
+            self.tasks_status.setObjectName("taskProviderStatus")
+            self.tasks_status.setWordWrap(True)
+            root.addWidget(self.tasks_status)
 
             limits_title = QLabel(tr("usage_limits"))
             limits_title.setStyleSheet("font-weight: 600;")
@@ -579,7 +758,6 @@ def run_gui(command: str) -> int:
             footer = QHBoxLayout()
             self.brand = QLabel(tr("brand"))
             self.brand.setStyleSheet("font-size: 10px;")
-            footer.addWidget(self.brand)
             footer.addStretch()
             open_button = QPushButton(QIcon.fromTheme("codex-lab"), tr("open_codex"))
             open_button.clicked.connect(lambda: QProcess.startDetached("codex-lab", []))
@@ -587,7 +765,8 @@ def run_gui(command: str) -> int:
             close_button = QPushButton(tr("close"))
             close_button.clicked.connect(self.hide)
             footer.addWidget(close_button)
-            root.addLayout(footer)
+            outer_root.addLayout(footer)
+            outer_root.addWidget(self.brand, alignment=Qt.AlignHCenter)
 
         def set_loading(self) -> None:
             self.refresh_button.setEnabled(False)
@@ -611,11 +790,15 @@ def run_gui(command: str) -> int:
                 name = QLabel(
                     f"{limit['name']} · {period_text(limit['window_minutes'])} · {tr(limit['kind'])}"
                 )
-                value = QLabel(tr("used", value=limit["used_percent"]))
+                name.setWordWrap(True)
+                remaining = limit["remaining_percent"]
+                value = QLabel(tr("remaining", value=f"{remaining:.1f}".rstrip("0").rstrip(".")) if remaining is not None else tr("unknown"))
+                value.setObjectName("quotaRemaining")
                 value.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 bar = QProgressBar()
                 bar.setRange(0, 100)
-                bar.setValue(limit["used_percent"])
+                bar.setValue(round(remaining) if remaining is not None else 0)
+                bar.setVisible(remaining is not None)
                 bar.setTextVisible(False)
                 bar.setFixedHeight(10)
                 reset = QLabel(reset_text(limit["resets_at"]))
@@ -637,9 +820,9 @@ def run_gui(command: str) -> int:
             rows = (
                 (tr("latest_day"), latest),
                 (tr("lifetime"), compact_number(activity["lifetime_tokens"])),
-                (tr("current_streak"), tr("days", value=activity["current_streak_days"] or 0)),
-                (tr("longest_streak"), tr("days", value=activity["longest_streak_days"] or 0)),
-                (tr("reset_credits"), str(data["reset_credits"])),
+                (tr("current_streak"), tr("days", value=activity["current_streak_days"]) if activity["current_streak_days"] is not None else tr("unknown")),
+                (tr("longest_streak"), tr("days", value=activity["longest_streak_days"]) if activity["longest_streak_days"] is not None else tr("unknown")),
+                (tr("reset_credits"), str(data["reset_credits"]) if data["reset_credits"] is not None else tr("unknown")),
             )
             for index, (label_text, value_text) in enumerate(rows):
                 label = QLabel(label_text)
@@ -655,6 +838,7 @@ def run_gui(command: str) -> int:
             self.dialog = UsageDialog()
             self.dialog.refresh_requested.connect(self.refresh)
             self.worker: UsageWorker | None = None
+            self.cache = AccountCache()
             self.last_report: Path | None = None
             self.notification_opens_report = False
 
@@ -669,6 +853,7 @@ def run_gui(command: str) -> int:
             menu = QMenu()
             actions = (
                 ("panel", tr("tray_usage"), "view-statistics"),
+                ("features", tr("features_title"), "preferences-system"),
                 ("ocr", tr("tray_ocr"), "edit-select-text"),
                 ("qr", tr("tray_qr"), "view-barcode-qr"),
                 ("crashes", tr("tray_crashes"), "tools-report-bug"),
@@ -684,12 +869,16 @@ def run_gui(command: str) -> int:
             self.tray.setContextMenu(menu)
             self.tray.activated.connect(self.tray_activated)
             self.tray.messageClicked.connect(self.open_last_report)
-            self.tray.show()
+            self.tray_available = QSystemTrayIcon.isSystemTrayAvailable()
+            if self.tray_available:
+                self.tray.show()
 
             self.crash_watcher = CrashWatcher()
             self.crash_watcher.crash_detected.connect(self.record_crash)
-            self.crash_watcher.start()
+            if not (os.environ.get("CODEX_LAB_TEST_MODE") == "1" and os.environ.get("CODEX_LAB_TEST_DISABLE_CRASH_WATCHER") == "1"):
+                self.crash_watcher.start()
             app.aboutToQuit.connect(self.shutdown)
+            self.refresh(force=False)
 
         @Slot()
         def accept_connection(self) -> None:
@@ -700,22 +889,46 @@ def run_gui(command: str) -> int:
                     self.read_socket(socket)
 
         def read_socket(self, socket: QLocalSocket) -> None:
-            action = bytes(socket.readAll()).decode(errors="replace").strip()
-            if action and action != "ping":
+            buffer = bytes(socket.property("commandBuffer") or QByteArray()) + bytes(socket.readAll())
+            if len(buffer) > 64:
+                socket.disconnectFromServer()
+                return
+            socket.setProperty("commandBuffer", QByteArray(buffer))
+            if b"\n" not in buffer:
+                return
+            action = buffer.partition(b"\n")[0].decode(errors="replace").strip()
+            if action in {"panel", "features", "ocr", "qr", "crashes"}:
                 self.dispatch(action)
             socket.disconnectFromServer()
 
         @Slot(QSystemTrayIcon.ActivationReason)
         def tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
             if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
-                self.dispatch("panel")
+                if self.dialog.isVisible():
+                    self.dialog.hide()
+                else:
+                    self.dispatch("panel")
 
         def dispatch(self, action: str) -> None:
             if action == "panel":
+                if not self.dialog.isVisible():
+                    tray_rect = self.tray.geometry()
+                    screen = QApplication.screenAt(tray_rect.center()) if tray_rect.isValid() else QApplication.primaryScreen()
+                    if screen is not None:
+                        available = screen.availableGeometry()
+                        anchor = (tray_rect.center().x(), tray_rect.top()) if tray_rect.isValid() else None
+                        x, y, width, height = popup_geometry(
+                            (available.x(), available.y(), available.width(), available.height()),
+                            (400, 480), anchor,
+                        )
+                        self.dialog.resize(width, height)
+                        self.dialog.move(x, y)  # A hint only; Wayland may ignore positioning.
                 self.dialog.show()
                 self.dialog.raise_()
                 self.dialog.activateWindow()
-                self.refresh()
+                self.refresh(force=False)
+            elif action == "features":
+                self.show_features()
             elif action == "ocr":
                 QTimer.singleShot(0, lambda: self.capture("ocr"))
             elif action == "qr":
@@ -723,17 +936,72 @@ def run_gui(command: str) -> int:
             elif action == "crashes":
                 self.open_crash_directory()
 
+        def show_features(self) -> None:
+            from codex_lab_features import feature_states, save_preferences
+            try:
+                states = feature_states()
+            except (OSError, ValueError, KeyError) as error:
+                QMessageBox.warning(self.dialog, APP_NAME, str(error))
+                return
+            self.feature_dialog = QDialog()
+            self.feature_dialog.setObjectName("featureSelector")
+            self.feature_dialog.setWindowTitle(tr("features_title"))
+            self.feature_dialog.resize(400, 420)
+            layout = QVBoxLayout(self.feature_dialog)
+            hint = QLabel(tr("features_hint")); hint.setWordWrap(True); layout.addWidget(hint)
+            checks = []
+            for state in states:
+                checkbox = QCheckBox(f"{state['title']} — {tr('feature_' + state['state'])}")
+                checkbox.setObjectName("feature_" + state["id"])
+                checkbox.setChecked(state["requested"])
+                checkbox.setEnabled(not state["blocker"] or state["requested"])
+                checkbox.setToolTip(state["blocker"] or state["stability"])
+                layout.addWidget(checkbox)
+                checks.append((state["id"], checkbox))
+            layout.addStretch()
+            save = QPushButton(tr("features_save"))
+            def save_selected() -> None:
+                try:
+                    save_preferences([identifier for identifier, checkbox in checks if checkbox.isChecked()])
+                except (OSError, ValueError) as error:
+                    QMessageBox.warning(self.feature_dialog, APP_NAME, str(error))
+                    return
+                hint.setText(tr("features_saved"))
+            save.clicked.connect(save_selected); layout.addWidget(save)
+            self.feature_dialog.show()
+
         @Slot()
-        def refresh(self) -> None:
-            if self.worker and self.worker.isRunning():
+        def refresh(self, force: bool = True) -> None:
+            if not force and not self.cache.needs_refresh() and self.cache.data is not None:
+                self.dialog.set_data(self.cache.data)
                 return
             self.dialog.set_loading()
+            if self.worker and self.worker.isRunning():
+                self.worker.request_refresh()
+                return
             self.worker = UsageWorker()
-            self.worker.succeeded.connect(self.dialog.set_data)
-            self.worker.failed.connect(self.dialog.set_error)
+            self.worker.succeeded.connect(self.set_data)
+            self.worker.failed.connect(self.set_error)
+            self.worker.account_invalidated.connect(self.invalidate_account)
             self.worker.finished.connect(self.usage_finished)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker.start()
+
+        def set_data(self, data: dict[str, Any]) -> None:
+            self.cache.update(data)
+            self.dialog.set_data(data)
+
+        def set_error(self, message: str) -> None:
+            self.cache.failed()
+            if self.cache.data is not None:
+                age = max(0, round((time.time() - self.cache.data["updated_at"]) / 60))
+                message = f"{message} · {tr('stale', minutes=age)}"
+            self.dialog.set_error(message)
+
+        def invalidate_account(self) -> None:
+            self.cache.account_changed()
+            self.dialog.set_data(normalize_account_data({}, {}))
+            self.dialog.status.setText(tr("account_changed"))
 
         @Slot()
         def usage_finished(self) -> None:
@@ -844,6 +1112,7 @@ def run_gui(command: str) -> int:
         def shutdown(self) -> None:
             if self.worker and self.worker.isRunning():
                 self.worker.requestInterruption()
+                self.worker.request_refresh()
                 if not self.worker.wait(3500):
                     self.worker.wait()
             self.crash_watcher.stop()
@@ -856,7 +1125,33 @@ def run_gui(command: str) -> int:
     except RuntimeError as error:
         print(f"{APP_NAME}: {error}", file=sys.stderr)
         return 1
-    QTimer.singleShot(0, lambda: controller.dispatch(command) if command != "tray" else None)
+    QTimer.singleShot(0, lambda: controller.dispatch(command if command != "tray" else "panel") if command != "tray" or not controller.tray_available else None)
+    if os.environ.get("CODEX_LAB_TEST_MODE") == "1" and os.environ.get("CODEX_LAB_TEST_FEATURE_REPORT") == "1":
+        def report_features() -> None:
+            dialog = controller.feature_dialog
+            print(json.dumps({"visible": dialog.isVisible(), "locale": language(), "title": dialog.windowTitle(), "features": [{"name": checkbox.objectName(), "enabled": checkbox.isEnabled(), "checked": checkbox.isChecked()} for checkbox in dialog.findChildren(QCheckBox)]}, ensure_ascii=False), flush=True)
+            if os.environ.get("CODEX_LAB_TEST_GUI_IMAGE"):
+                dialog.grab().save(os.environ["CODEX_LAB_TEST_GUI_IMAGE"])
+        QTimer.singleShot(300, report_features)
+    if os.environ.get("CODEX_LAB_TEST_MODE") == "1" and os.environ.get("CODEX_LAB_TEST_GUI_REPORT") == "1":
+        def report_gui() -> None:
+            print(json.dumps({
+                "locale": language(),
+                "visible": controller.dialog.isVisible(),
+                "width": controller.dialog.width(),
+                "remaining": [label.text() for label in controller.dialog.findChildren(QLabel, "quotaRemaining")],
+                "tasks": controller.dialog.tasks_status.text(),
+                "tray_available": controller.tray_available,
+                "popup_backend": "compatible-dialog",
+                "palette": {
+                    "window": app.palette().color(QPalette.Window).name(),
+                    "text": app.palette().color(QPalette.WindowText).name(),
+                },
+            }, ensure_ascii=False), flush=True)
+            image_path = os.environ.get("CODEX_LAB_TEST_GUI_IMAGE")
+            if image_path:
+                controller.dialog.grab().save(image_path)
+        QTimer.singleShot(300, report_gui)
     test_quit_ms = int(os.environ.get("CODEX_LAB_TEST_QUIT_MS", os.environ.get("CODEXUI_TEST_QUIT_MS", "0")))
     if test_quit_ms > 0:
         QTimer.singleShot(test_quit_ms, app.quit)
@@ -867,6 +1162,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
     if args.command == "usage-json":
         print(json.dumps(query_codex_account(), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "features-json":
+        from codex_lab_features import feature_states
+        print(json.dumps(feature_states(), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "feature-profile-json":
+        from codex_lab_features import build_profile
+        print(json.dumps(build_profile(), ensure_ascii=False, indent=2))
         return 0
     return run_gui(args.command)
 
