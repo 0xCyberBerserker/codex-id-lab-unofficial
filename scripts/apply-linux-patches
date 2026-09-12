@@ -302,19 +302,25 @@ if (exposesVoice && !text.includes(globalDictationMarker)) {
     "process.platform===`linux`||this.configuredHotkey==null?this.unregisterHotkey():this.registerHotkeyOrThrow(this.configuredHotkey,e)",
   );
 
-  const pasteFunctionStart = text.indexOf("async function RIe(){switch(process.platform)");
-  const pasteFunctionEnd = pasteFunctionStart === -1 ? -1 : text.indexOf("}}", pasteFunctionStart) + 2;
-  if (pasteFunctionStart === -1 || pasteFunctionEnd <= pasteFunctionStart) {
+  const unsupportedLinux = "case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)";
+  const unsupportedStart = text.indexOf(unsupportedLinux);
+  if (unsupportedStart === -1 || text.indexOf(unsupportedLinux, unsupportedStart + 1) !== -1) {
+    throw new Error(`unrecognized global dictation Linux paste branch in ${file}`);
+  }
+  const pasteHeaders = [...text.slice(0, unsupportedStart).matchAll(/async function [A-Za-z_$][\w$]*\(\)\{switch\(process\.platform\)\{/g)];
+  const pasteFunctionStart = pasteHeaders.at(-1)?.index;
+  const pasteFunctionEnd = unsupportedStart + unsupportedLinux.length + 2;
+  if (pasteFunctionStart == null || text.slice(pasteFunctionEnd - 2, pasteFunctionEnd) !== "}}") {
     throw new Error(`unrecognized global dictation paste function in ${file}`);
   }
   const pasteFunction = text.slice(pasteFunctionStart, pasteFunctionEnd);
-  const unsupportedLinux = "case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)";
-  if (!pasteFunction.includes(unsupportedLinux)) {
-    throw new Error(`unrecognized global dictation Linux paste branch in ${file}`);
+  const pasteCommand = pasteFunction.match(/case`win32`:await ([A-Za-z_$][\w$]*)\(`powershell\.exe`,/);
+  if (!pasteCommand || pasteFunction.indexOf("async function ", 1) !== -1) {
+    throw new Error(`unrecognized global dictation paste command in ${file}`);
   }
   const patchedPasteFunction = pasteFunction.replace(
     unsupportedLinux,
-    "case`linux`:await z7(`/opt/codex-ui-linux-port/bin/codex-ui-linux-paste`,[]);return;case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)",
+    `case\`linux\`:await ${pasteCommand[1]}(\`/opt/codex-ui-linux-port/bin/codex-ui-linux-paste\`,[]);return;case\`aix\`:case\`android\`:case\`cygwin\`:case\`freebsd\`:case\`haiku\`:case\`netbsd\`:case\`openbsd\`:case\`sunos\`:throw Error(\`Global dictation paste is not supported on this OS.\`)`,
   );
   text = text.slice(0, pasteFunctionStart) + patchedPasteFunction + text.slice(pasteFunctionEnd);
 }
