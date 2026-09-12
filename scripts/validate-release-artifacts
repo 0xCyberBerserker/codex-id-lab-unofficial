@@ -3,7 +3,10 @@ set -euo pipefail
 
 DIST="${1:-dist}"
 VERSION="${2:?version required}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REVISION="${3:-$(tr -d '[:space:]' < "$ROOT/packaging/revision")}"
 NAME="codex-id-lab-unofficial"
+EXPECTED_PROFILE="${CODEX_LAB_VALIDATION_PROFILE:-release}"
 
 fail() {
   echo "validate-release-artifacts: $*" >&2
@@ -11,15 +14,16 @@ fail() {
 }
 
 [[ -d "$DIST" ]] || fail "directory not found: $DIST"
+[[ "$REVISION" =~ ^[1-9][0-9]*$ ]] || fail "invalid packaging revision: $REVISION"
 
 archive_file="chatgpt_${VERSION}_amd64.deb"
 [[ -s "$DIST/$archive_file" ]] || fail "missing source archive: $archive_file"
 
 expected=(
   "$archive_file"
-  "${NAME}-${VERSION}-1-x86_64.pkg.tar.zst"
-  "${NAME}-${VERSION}-1.x86_64.rpm"
-  "${NAME}_${VERSION}_amd64.deb"
+  "${NAME}-${VERSION}-${REVISION}-x86_64.pkg.tar.zst"
+  "${NAME}-${VERSION}-${REVISION}.x86_64.rpm"
+  "${NAME}_${VERSION}-${REVISION}_amd64.deb"
   "manifest.json"
   "checksums.txt"
 )
@@ -32,31 +36,74 @@ for unexpected in "$DIST"/*.dmg "$DIST"/*.zip "$DIST"/*.pkg.tar.zst "$DIST"/*.rp
   [[ -e "$unexpected" ]] || continue
   base="$(basename "$unexpected")"
   case "$base" in
-    "$archive_file"|"${NAME}-${VERSION}-1-x86_64.pkg.tar.zst"|"${NAME}-${VERSION}-1.x86_64.rpm"|"${NAME}_${VERSION}_amd64.deb") ;;
+    "$archive_file"|"${NAME}-${VERSION}-${REVISION}-x86_64.pkg.tar.zst"|"${NAME}-${VERSION}-${REVISION}.x86_64.rpm"|"${NAME}_${VERSION}-${REVISION}_amd64.deb") ;;
     *) fail "unexpected package artifact: $base" ;;
   esac
 done
 
 if command -v jq >/dev/null 2>&1; then
-  manifest_version="$(jq -r '.version // empty' "$DIST/manifest.json")"
-  manifest_archive_file="$(jq -r '.sourceArchiveFile // .sourceDmgFile // empty' "$DIST/manifest.json")"
-  manifest_archive_sha="$(jq -r '.sourceArchiveSha256 // .sourceDmgSha256 // empty' "$DIST/manifest.json")"
-  manifest_build_recipe_sha="$(jq -r '.buildRecipeSha256 // empty' "$DIST/manifest.json")"
+  manifest_values="$(jq -r '[.upstreamVersion // empty, .packageVersion // empty, (.packagingRevision // "" | tostring), .architecture // empty, .buildProfile // empty, .featureProfile // empty, .featureProfileSha256 // empty, .payloadSha256 // empty, .commitSha // empty, .sourceArchiveFile // .sourceDmgFile // empty, .sourceArchiveSha256 // .sourceDmgSha256 // empty, .buildRecipeSha256 // empty] | .[]' "$DIST/manifest.json")"
+  artifact_rows="$(jq -r '.artifacts[]? | [.name // "", .format // "", .architecture // "", .sha256 // "", (.size // "" | tostring)] | @tsv' "$DIST/manifest.json")"
 else
-  manifest_values="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write([p.version || "", p.sourceArchiveFile || p.sourceDmgFile || "", p.sourceArchiveSha256 || p.sourceDmgSha256 || "", p.buildRecipeSha256 || ""].join("\n"))' "$DIST/manifest.json")"
-  manifest_version="$(printf '%s\n' "$manifest_values" | sed -n '1p')"
-  manifest_archive_file="$(printf '%s\n' "$manifest_values" | sed -n '2p')"
-  manifest_archive_sha="$(printf '%s\n' "$manifest_values" | sed -n '3p')"
-  manifest_build_recipe_sha="$(printf '%s\n' "$manifest_values" | sed -n '4p')"
+  manifest_values="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write([p.upstreamVersion || "", p.packageVersion || "", p.packagingRevision ?? "", p.architecture || "", p.buildProfile || "", p.featureProfile || "", p.featureProfileSha256 || "", p.payloadSha256 || "", p.commitSha || "", p.sourceArchiveFile || p.sourceDmgFile || "", p.sourceArchiveSha256 || p.sourceDmgSha256 || "", p.buildRecipeSha256 || ""].join("\n"))' "$DIST/manifest.json")"
+  artifact_rows="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write((p.artifacts || []).map(a => [a.name || "", a.format || "", a.architecture || "", a.sha256 || "", a.size ?? ""].join("\t")).join("\n"))' "$DIST/manifest.json")"
 fi
 
+manifest_version="$(printf '%s\n' "$manifest_values" | sed -n '1p')"
+manifest_package_version="$(printf '%s\n' "$manifest_values" | sed -n '2p')"
+manifest_revision="$(printf '%s\n' "$manifest_values" | sed -n '3p')"
+manifest_architecture="$(printf '%s\n' "$manifest_values" | sed -n '4p')"
+manifest_profile="$(printf '%s\n' "$manifest_values" | sed -n '5p')"
+manifest_feature_profile="$(printf '%s\n' "$manifest_values" | sed -n '6p')"
+manifest_feature_profile_sha="$(printf '%s\n' "$manifest_values" | sed -n '7p')"
+manifest_payload_sha="$(printf '%s\n' "$manifest_values" | sed -n '8p')"
+manifest_commit="$(printf '%s\n' "$manifest_values" | sed -n '9p')"
+manifest_archive_file="$(printf '%s\n' "$manifest_values" | sed -n '10p')"
+manifest_archive_sha="$(printf '%s\n' "$manifest_values" | sed -n '11p')"
+manifest_build_recipe_sha="$(printf '%s\n' "$manifest_values" | sed -n '12p')"
+
 [[ "$manifest_version" == "$VERSION" ]] || fail "manifest version mismatch: got '$manifest_version', expected '$VERSION'"
+[[ "$manifest_package_version" == "$VERSION-$REVISION" ]] || fail "manifest package version mismatch: got '$manifest_package_version'"
+[[ "$manifest_revision" == "$REVISION" ]] || fail "manifest packaging revision mismatch: got '$manifest_revision'"
+[[ "$manifest_architecture" == "x86_64" ]] || fail "manifest architecture mismatch: got '$manifest_architecture'"
+[[ "$EXPECTED_PROFILE" == "release" || "$EXPECTED_PROFILE" == "local-candidate" ]] || fail "invalid expected build profile"
+[[ "$manifest_profile" == "$EXPECTED_PROFILE" ]] || fail "manifest build profile mismatch: got '$manifest_profile'"
+[[ "$manifest_feature_profile" == "base" ]] || fail "manifest feature profile mismatch: got '$manifest_feature_profile'"
+[[ "$manifest_feature_profile_sha" =~ ^[0-9a-f]{64}$ ]] || fail "manifest feature profile SHA is missing or invalid"
+[[ "$manifest_feature_profile_sha" == "$(sha256sum "$ROOT/packaging/profiles/base.json" | awk '{print $1}')" ]] || fail "manifest feature profile SHA mismatch"
+[[ "$manifest_payload_sha" =~ ^[0-9a-f]{64}$ ]] || fail "manifest payload SHA is missing or invalid"
+[[ "$manifest_commit" =~ ^[0-9a-fA-F]{40}$ ]] || fail "manifest commit SHA is missing or invalid"
 [[ "$manifest_archive_file" == "$archive_file" ]] || fail "manifest source archive file mismatch: got '$manifest_archive_file'"
 [[ "$manifest_build_recipe_sha" =~ ^[0-9a-f]{64}$ ]] || fail "manifest build recipe SHA is missing or invalid"
 
 actual_archive_sha="$(sha256sum "$DIST/$archive_file" | awk '{print $1}')"
 [[ "$manifest_archive_sha" == "$actual_archive_sha" ]] || fail "manifest source archive SHA mismatch"
 
+declare -A seen_artifacts=()
+artifact_count=0
+while IFS=$'\t' read -r name format architecture digest size; do
+  [[ -n "$name" && "$(basename "$name")" == "$name" ]] || fail "unsafe manifest artifact name"
+  [[ -z "${seen_artifacts[$name]:-}" ]] || fail "duplicate manifest artifact: $name"
+  seen_artifacts[$name]=1
+  case "$name" in
+    "$archive_file") expected_format="source-deb"; expected_architecture="amd64" ;;
+    "${NAME}-${VERSION}-${REVISION}-x86_64.pkg.tar.zst") expected_format="arch"; expected_architecture="x86_64" ;;
+    "${NAME}_${VERSION}-${REVISION}_amd64.deb") expected_format="deb"; expected_architecture="amd64" ;;
+    "${NAME}-${VERSION}-${REVISION}.x86_64.rpm") expected_format="rpm"; expected_architecture="x86_64" ;;
+    *) fail "unexpected manifest artifact: $name" ;;
+  esac
+  [[ "$format" == "$expected_format" ]] || fail "manifest format mismatch for $name"
+  [[ "$architecture" == "$expected_architecture" ]] || fail "manifest architecture mismatch for $name"
+  [[ "$digest" =~ ^[0-9a-f]{64}$ && "$digest" == "$(sha256sum "$DIST/$name" | awk '{print $1}')" ]] || fail "manifest SHA mismatch for $name"
+  [[ "$size" =~ ^[1-9][0-9]*$ && "$size" == "$(stat -c %s "$DIST/$name")" ]] || fail "manifest size mismatch for $name"
+  artifact_count=$((artifact_count + 1))
+done <<< "$artifact_rows"
+[[ "$artifact_count" -eq 4 ]] || fail "manifest must describe exactly four release artifacts"
+
 (cd "$DIST" && sha256sum -c checksums.txt)
+
+"$ROOT/scripts/validate-package" arch "$DIST/${NAME}-${VERSION}-${REVISION}-x86_64.pkg.tar.zst" "$VERSION" "$REVISION" "$DIST/$archive_file"
+"$ROOT/scripts/validate-package" deb "$DIST/${NAME}_${VERSION}-${REVISION}_amd64.deb" "$VERSION" "$REVISION" "$DIST/$archive_file"
+"$ROOT/scripts/validate-package" rpm "$DIST/${NAME}-${VERSION}-${REVISION}.x86_64.rpm" "$VERSION" "$REVISION" "$DIST/$archive_file"
 
 echo "validate-release-artifacts: package set complete for $VERSION"

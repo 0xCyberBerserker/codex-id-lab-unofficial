@@ -5,11 +5,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE=""
 SOURCE_URL=""
 VERSION=""
+REVISION="$(tr -d '[:space:]' < "$ROOT/packaging/revision")"
 WORKDIR="$ROOT/build/work"
-DIST="$ROOT/dist"
+DIST="${CODEX_LAB_DIST:-$ROOT/dist}"
 
 usage() {
-  echo "Usage: scripts/build-from-linux --source chatgpt_amd64.deb [--source-url URL] [--version VERSION]"
+  echo "Usage: scripts/build-from-linux --source chatgpt_amd64.deb [--source-url URL] [--version VERSION] [--revision REVISION]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -17,6 +18,7 @@ while [[ $# -gt 0 ]]; do
     --source) shift; SOURCE="${1:-}" ;;
     --source-url) shift; SOURCE_URL="${1:-}" ;;
     --version) shift; VERSION="${1:-}" ;;
+    --revision) shift; REVISION="${1:-}" ;;
     --help|-h) usage; exit 0 ;;
     *) echo "build-from-linux: unknown option: $1" >&2; exit 2 ;;
   esac
@@ -24,7 +26,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -f "$SOURCE" ]] || { echo "build-from-linux: source package not found: $SOURCE" >&2; exit 2; }
-for command in dpkg-deb sha256sum jq; do
+if [[ "${CODEX_LAB_BUILD_PROFILE:-release}" == release || -f "$SOURCE.InRelease" ]]; then
+  [[ "${CODEX_LAB_RESOLVER_TEST_MODE:-0}" != 1 ]] || { echo "build-from-linux: test trust anchors cannot identify a production build" >&2; exit 2; }
+  "$ROOT/scripts/resolve-linux-source" --output "$SOURCE" --verify-cache
+  source_verification="$(cat "$SOURCE.verification.json")"
+  verified_source_url="$(jq -r .sourceUrl <<< "$source_verification")"
+  [[ -z "$SOURCE_URL" || "$SOURCE_URL" == "$verified_source_url" ]] || { echo "build-from-linux: source URL contradicts signed metadata" >&2; exit 2; }
+  SOURCE_URL="$verified_source_url"
+else
+  source_verification='{"status":"unverified-local-candidate"}'
+fi
+[[ "$REVISION" =~ ^[1-9][0-9]*$ ]] || { echo "build-from-linux: invalid packaging revision: $REVISION" >&2; exit 2; }
+for command in dpkg-deb sha256sum jq git node python3; do
   command -v "$command" >/dev/null 2>&1 || { echo "build-from-linux: missing command: $command" >&2; exit 2; }
 done
 
@@ -65,20 +78,42 @@ rm -rf "$WORKDIR/source"
 
 source_sha="$(sha256sum "$SOURCE" | awk '{print $1}')"
 build_recipe_sha="$("$ROOT/scripts/build-recipe-sha")"
-"$ROOT/scripts/build-packages" "$WORKDIR/pkgroot" "$VERSION" "$source_sha"
+build_commit="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
+build_profile="${CODEX_LAB_BUILD_PROFILE:-release}"
+feature_profile="${CODEX_LAB_FEATURE_PROFILE:-base}"
+feature_profile_file="$ROOT/packaging/profiles/$feature_profile.json"
+[[ "$build_commit" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "build-from-linux: invalid build commit" >&2; exit 2; }
+[[ "$build_profile" =~ ^[a-z0-9][a-z0-9.-]*$ ]] || { echo "build-from-linux: invalid build profile" >&2; exit 2; }
+[[ "$feature_profile" =~ ^[a-z0-9][a-z0-9.-]*$ && -f "$feature_profile_file" ]] || {
+  echo "build-from-linux: invalid or missing feature profile: $feature_profile" >&2
+  exit 2
+}
+feature_profile_sha="$(sha256sum "$feature_profile_file" | awk '{print $1}')"
+node "$ROOT/scripts/lab-features.js" stage "$install_root" "$feature_profile_file" "$ROOT/linux-features" >/dev/null
+payload_sha="$("$ROOT/scripts/payload-digest" "$install_root")"
 
 source_archive_file="chatgpt_${VERSION}_amd64.deb"
-cp "$SOURCE" "$DIST/$source_archive_file"
-
 jq -n \
   --arg version "$VERSION" \
+  --arg package_version "$VERSION-$REVISION" \
+  --argjson packaging_revision "$REVISION" \
   --arg source_archive_file "$source_archive_file" \
   --arg source_archive_url "$SOURCE_URL" \
   --arg source_archive_sha256 "$source_sha" \
   --arg build_recipe_sha256 "$build_recipe_sha" \
+  --arg build_commit "$build_commit" \
+  --arg build_profile "$build_profile" \
+  --arg feature_profile "$feature_profile" \
+  --arg feature_profile_sha256 "$feature_profile_sha" \
+  --arg payload_sha256 "$payload_sha" \
+  --argjson source_verification "$source_verification" \
   --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{version: $version, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-id-lab-unofficial"}' \
-  > "$DIST/manifest.json"
+  '{manifestVersion: 2, version: $version, upstreamVersion: $version, packageVersion: $package_version, packagingRevision: $packaging_revision, architecture: "x86_64", buildProfile: $build_profile, featureProfile: $feature_profile, featureProfileSha256: $feature_profile_sha256, payloadSha256: $payload_sha256, sourceVerification: $source_verification, commitSha: $build_commit, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-id-lab-unofficial"}' \
+  > "$WORKDIR/build-manifest.json"
+
+"$ROOT/scripts/build-packages" "$WORKDIR/pkgroot" "$VERSION" "$REVISION" "$WORKDIR/build-manifest.json"
+cp "$SOURCE" "$DIST/$source_archive_file"
+"$ROOT/scripts/create-release-manifest" "$WORKDIR/build-manifest.json" "$DIST" "$DIST/manifest.json"
 
 (cd "$DIST" && find . -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.zst' -o -name 'manifest.json' \) -printf '%P\n' | sort | xargs -r sha256sum > checksums.txt)
 echo "build-from-linux: artifacts written to $DIST"

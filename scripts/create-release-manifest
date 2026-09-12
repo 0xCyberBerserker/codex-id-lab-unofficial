@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Add final package digests to an external release manifest."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+
+def artifact_record(path: Path, package_format: str, architecture: str) -> dict[str, object]:
+    return {
+        "name": path.name,
+        "format": package_format,
+        "architecture": architecture,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "size": path.stat().st_size,
+    }
+
+
+def main() -> int:
+    if len(sys.argv) != 4:
+        print("Usage: scripts/create-release-manifest BUILD_MANIFEST DIST OUTPUT", file=sys.stderr)
+        return 2
+
+    build_manifest_path, dist, output = map(Path, sys.argv[1:])
+    try:
+        manifest = json.loads(build_manifest_path.read_text(encoding="utf-8"))
+        upstream = manifest["upstreamVersion"]
+        revision = manifest["packagingRevision"]
+        package_name = manifest["packageName"]
+        expected = (
+            (f"chatgpt_{upstream}_amd64.deb", "source-deb", "amd64"),
+            (f"{package_name}-{upstream}-{revision}-x86_64.pkg.tar.zst", "arch", "x86_64"),
+            (f"{package_name}_{upstream}-{revision}_amd64.deb", "deb", "amd64"),
+            (f"{package_name}-{upstream}-{revision}.x86_64.rpm", "rpm", "x86_64"),
+        )
+        artifacts = []
+        for name, package_format, architecture in expected:
+            path = dist / name
+            if not path.is_file() or path.stat().st_size == 0:
+                raise ValueError(f"missing or empty artifact: {name}")
+            artifacts.append(artifact_record(path, package_format, architecture))
+        manifest["artifacts"] = artifacts
+        output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except (KeyError, OSError, ValueError, json.JSONDecodeError) as error:
+        print(f"create-release-manifest: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

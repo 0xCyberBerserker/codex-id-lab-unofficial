@@ -3,11 +3,16 @@ set -euo pipefail
 
 PKGROOT="${1:?pkgroot required}"
 VERSION="${2:?version required}"
-SOURCE_SHA="${3:?source archive sha required}"
+REVISION="${3:?packaging revision required}"
+MANIFEST="${4:?manifest required}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DIST="$ROOT/dist"
+DIST="${CODEX_LAB_DIST:-$ROOT/dist}"
 NAME="codex-id-lab-unofficial"
 ARCH="x86_64"
+
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "build-packages: invalid upstream version" >&2; exit 2; }
+[[ "$REVISION" =~ ^[1-9][0-9]*$ ]] || { echo "build-packages: invalid packaging revision" >&2; exit 2; }
+[[ -s "$MANIFEST" ]] || { echo "build-packages: manifest not found" >&2; exit 2; }
 
 rm -rf "$DIST"
 mkdir -p "$DIST"
@@ -17,7 +22,7 @@ stage_common() {
   mkdir -p "$target/opt" "$target/usr/bin" "$target/usr/lib/systemd/user" "$target/usr/share/applications" "$target/usr/share/icons/hicolor/scalable/apps" "$target/usr/share/licenses/codex-id-lab-unofficial"
   cp -a "$PKGROOT/opt/codex-id-lab-unofficial" "$target/opt/"
   install -m 755 "$ROOT/scripts/codex-lab-install" "$target/opt/codex-id-lab-unofficial/bin/codex-lab-install"
-  ln -s codex-lab-install "$target/opt/codex-id-lab-unofficial/bin/codex-lab-update"
+  ln -sf codex-lab-install "$target/opt/codex-id-lab-unofficial/bin/codex-lab-update"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab "$target/usr/bin/codex-lab"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab-install "$target/usr/bin/codex-lab-install"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab-update "$target/usr/bin/codex-lab-update"
@@ -31,9 +36,10 @@ stage_common() {
   install -m 644 "$ROOT/LICENSE" "$target/usr/share/licenses/codex-id-lab-unofficial/LICENSE"
   install -m 644 "$ROOT/NOTICE.md" "$target/usr/share/licenses/codex-id-lab-unofficial/NOTICE.md"
   install -m 644 "$ROOT/DISCLAIMER.md" "$target/usr/share/licenses/codex-id-lab-unofficial/DISCLAIMER.md"
-  cat > "$target/opt/codex-id-lab-unofficial/manifest.json" <<JSON
-{"version":"$VERSION","sourceArchiveSha256":"$SOURCE_SHA","package":"$NAME"}
-JSON
+  mkdir -p "$target/usr/share/licenses/codex-id-lab-unofficial/third-party/ilysenko"
+  install -m 644 "$ROOT/third-party/ilysenko/LICENSE" "$target/usr/share/licenses/codex-id-lab-unofficial/third-party/ilysenko/LICENSE"
+  install -m 644 "$ROOT/third-party/upstream.lock.json" "$target/usr/share/licenses/codex-id-lab-unofficial/third-party/upstream.lock.json"
+  install -m 644 "$MANIFEST" "$target/opt/codex-id-lab-unofficial/manifest.json"
 }
 
 arch_root="$DIST/arch-root"
@@ -41,7 +47,7 @@ stage_common "$arch_root"
 cat > "$DIST/.PKGINFO" <<EOF
 pkgname = $NAME
 pkgbase = $NAME
-pkgver = $VERSION-1
+pkgver = $VERSION-$REVISION
 pkgdesc = Codex I+D Lab - Unofficial
 url = https://github.com/0xCyberBerserker/codex-id-lab-unofficial
 builddate = $(date +%s)
@@ -55,6 +61,7 @@ replaces = codex-ui-linux-port
 depend = nodejs
 depend = curl
 depend = jq
+depend = github-cli
 depend = desktop-file-utils
 depend = alsa-lib
 depend = at-spi2-core
@@ -83,15 +90,15 @@ depend = nss
 depend = pango
 depend = systemd-libs
 depend = xdg-utils
-depend = pyside6
-depend = spectacle
-depend = tesseract
-depend = tesseract-data-eng
-depend = tesseract-data-spa
-depend = zbar
+optdepend = pyside6: native Qt companion
+optdepend = spectacle: interactive OCR and QR capture
+optdepend = tesseract: optional OCR
+optdepend = tesseract-data-eng: English OCR
+optdepend = tesseract-data-spa: Spanish OCR
+optdepend = zbar: optional QR decoding
 EOF
 cp "$DIST/.PKGINFO" "$arch_root/.PKGINFO"
-(cd "$arch_root" && bsdtar --zstd -cf "$DIST/${NAME}-${VERSION}-1-${ARCH}.pkg.tar.zst" .PKGINFO opt usr)
+(cd "$arch_root" && bsdtar --uid 0 --gid 0 --uname root --gname root --zstd -cf "$DIST/${NAME}-${VERSION}-${REVISION}-${ARCH}.pkg.tar.zst" .PKGINFO opt usr)
 rm -rf "$arch_root"
 
 deb_root="$DIST/deb-root"
@@ -100,11 +107,12 @@ if command -v dpkg-deb >/dev/null 2>&1; then
   mkdir -p "$deb_root/DEBIAN"
   cat > "$deb_root/DEBIAN/control" <<EOF
 Package: $NAME
-Version: $VERSION
+Version: $VERSION-$REVISION
 Section: devel
 Priority: optional
 Architecture: amd64
-Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, libasound2, libcups2, libdbus-1-3, libx11-6, libx11-xcb1, libxcb1, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxkbcommon0, libxrandr2, mesa-vulkan-drivers | vulkan-icd, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
+Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, libasound2, libcups2, libdbus-1-3, libx11-6, libx11-xcb1, libxcb1, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxkbcommon0, libxrandr2, mesa-vulkan-drivers | vulkan-icd, nodejs, curl, jq, gh, desktop-file-utils
+Suggests: python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
 Maintainer: unofficial automation
 Provides: codex-ui-linux-port
 Conflicts: codex-ui-linux-port
@@ -112,7 +120,7 @@ Replaces: codex-ui-linux-port
 Description: Codex I+D Lab - Unofficial
  Unofficial Linux packaging automation for the official ChatGPT runtime.
 EOF
-  dpkg-deb --build "$deb_root" "$DIST/${NAME}_${VERSION}_amd64.deb" >/dev/null
+  dpkg-deb --root-owner-group --build "$deb_root" "$DIST/${NAME}_${VERSION}-${REVISION}_amd64.deb" >/dev/null
   rm -rf "$deb_root"
 else
   echo "build-packages: dpkg-deb not found; deb package skipped" >&2
@@ -121,13 +129,13 @@ fi
 rpm_root="$DIST/rpm-root"
 if command -v rpmbuild >/dev/null 2>&1; then
   stage_common "$rpm_root"
-  tar -C "$rpm_root" -cf "$DIST/${NAME}-${VERSION}-payload.tar" .
+  tar --owner=0 --group=0 -C "$rpm_root" -cf "$DIST/${NAME}-${VERSION}-${REVISION}-payload.tar" .
   rm -rf "$rpm_root"
   cat > "$DIST/${NAME}.spec" <<EOF
-%global __brp_strip_static_archive %{nil}
+%global __os_install_post %{nil}
 Name: $NAME
 Version: $VERSION
-Release: 1
+Release: $REVISION
 Summary: Codex I+D Lab - Unofficial
 License: Custom
 BuildArch: x86_64
@@ -136,6 +144,7 @@ Obsoletes: codex-ui-linux-port
 Requires: nodejs
 Requires: curl
 Requires: jq
+Requires: gh
 Requires: desktop-file-utils
 Requires: alsa-lib
 Requires: at-spi2-core
@@ -160,12 +169,12 @@ Requires: nspr
 Requires: nss
 Requires: pango
 Requires: xdg-utils
-Requires: python3-pyside6
-Requires: spectacle
-Requires: tesseract
-Requires: tesseract-langpack-eng
-Requires: tesseract-langpack-spa
-Requires: zbar
+Suggests: python3-pyside6
+Suggests: spectacle
+Suggests: tesseract
+Suggests: tesseract-langpack-eng
+Suggests: tesseract-langpack-spa
+Suggests: zbar
 
 %description
 Unofficial packaging automation for the official ChatGPT Linux runtime.
@@ -176,7 +185,7 @@ Unofficial packaging automation for the official ChatGPT Linux runtime.
 
 %install
 mkdir -p %{buildroot}
-tar -xf %{_sourcedir}/${NAME}-${VERSION}-payload.tar -C %{buildroot}
+tar -xf %{_sourcedir}/${NAME}-${VERSION}-${REVISION}-payload.tar -C %{buildroot}
 
 %files
 /opt/codex-id-lab-unofficial
@@ -198,10 +207,10 @@ EOF
     -bb "$DIST/${NAME}.spec" >/dev/null
   built_rpm="$(find "$DIST/$ARCH" -name '*.rpm' -type f -print -quit)"
   [[ -n "$built_rpm" ]] || { echo "build-packages: RPM output not found" >&2; exit 1; }
-  cp "$built_rpm" "$DIST/${NAME}-${VERSION}-1.x86_64.rpm"
+  cp "$built_rpm" "$DIST/${NAME}-${VERSION}-${REVISION}.x86_64.rpm"
 else
   echo "build-packages: rpmbuild not found; rpm package skipped" >&2
 fi
 
 rm -rf "$DIST/arch-root" "$DIST/deb-root" "$DIST/rpm-root" "$DIST/rpmbuild" "$DIST/x86_64"
-rm -f "$DIST/.PKGINFO" "$DIST/${NAME}.spec" "$DIST/${NAME}-${VERSION}-payload.tar"
+rm -f "$DIST/.PKGINFO" "$DIST/${NAME}.spec" "$DIST/${NAME}-${VERSION}-${REVISION}-payload.tar"
