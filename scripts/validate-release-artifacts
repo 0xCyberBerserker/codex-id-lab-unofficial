@@ -12,7 +12,7 @@ fail() {
 
 [[ -d "$DIST" ]] || fail "directory not found: $DIST"
 
-archive_file="Codex-${VERSION}.dmg"
+archive_file="chatgpt_${VERSION}_amd64.deb"
 [[ -s "$DIST/$archive_file" ]] || fail "missing source archive: $archive_file"
 
 expected=(

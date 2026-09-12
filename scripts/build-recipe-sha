@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-mapfile -d '' files < <(git ls-files -z --cached --others --exclude-standard -- scripts packaging resources tools)
+mapfile -d '' files < <(git ls-files -z --cached --others --exclude-standard -- scripts packaging resources tools | while IFS= read -r -d '' file; do
+  [[ -f "$file" ]] && printf '%s\0' "$file"
+done)
 [[ "${#files[@]}" -gt 0 ]] || { echo "build-recipe-sha: no build inputs found" >&2; exit 1; }
 
 printf '%s\0' "${files[@]}" | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'

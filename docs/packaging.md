@@ -1,6 +1,6 @@
 # Packaging
 
-The package layout is intentionally small and does not bundle a full Electron runtime.
+The package bundles the official Linux-native ChatGPT runtime without modifying its application bundle.
 
 Installed paths:
 
@@ -16,7 +16,7 @@ Installed paths:
 
 Runtime dependencies:
 
-- Electron 42 (`electron42`)
+- GTK 3 and the shared libraries required by the official runtime
 - Node.js
 - curl
 - jq
@@ -26,7 +26,7 @@ Runtime dependencies:
 - Tesseract with English and Spanish language data
 - zbar
 
-The Arch/CachyOS package is the primary supported target. Debian and Fedora packages are experimental: they are generated for portability testing, but the host must provide a compatible Electron 42 runtime.
+The Arch/CachyOS package is the primary supported target. Debian and Fedora packages are experimental portability targets. All packages carry the upstream runtime and require compatible host libraries.
 
 Generated packages use `Custom` license metadata because they aggregate repository-authored material and upstream components governed by separate terms. Project license files are installed under `/usr/share/licenses/codex-ui-linux-port`.
 
@@ -36,14 +36,14 @@ GitHub Actions is the authoritative builder for release artifacts. Generated rel
 
 A release run must generate and validate:
 
-- `Codex-$VERSION.dmg`
+- `chatgpt_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
 - `codex-ui-linux-port_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 
-The workflow reads the latest version from the official appcast and downloads the official stable `Codex.dmg` URL on every run. It validates the DMG's internal application version before packaging. If a release for the same version exists, the workflow compares the downloaded DMG SHA256 with `manifest.json`, downloads every asset listed in `checksums.txt`, and verifies every hash. Matching source and artifact hashes mean the release is current and the build is skipped. Any mismatch rebuilds the packages and refreshes release assets with `--clobber`.
+The workflow verifies the pinned OpenAI repository-key fingerprint, the signed `InRelease` metadata, the package-index hash, and the Linux DEB hash and size. If a release for the same version exists, it also verifies every asset listed in `checksums.txt`. Any source, recipe, or artifact mismatch rebuilds the packages and refreshes release assets with `--clobber`.
 
 `manifest.json` records the upstream source URL, source archive filename, SHA256, package version, and UTC generation timestamp.
 
@@ -55,7 +55,7 @@ Local package builds remain supported for bootstrap, debugging, and smoke testin
 
 # Empaquetado
 
-El layout del paquete es intencionadamente pequeño y no incluye un runtime Electron completo.
+El paquete incluye el runtime Linux nativo oficial de ChatGPT sin modificar su bundle de aplicación.
 
 Rutas instaladas:
 
@@ -71,7 +71,7 @@ Rutas instaladas:
 
 Dependencias de ejecución:
 
-- Electron 42 (`electron42`)
+- GTK 3 y las bibliotecas compartidas requeridas por el runtime oficial
 - Node.js
 - curl
 - jq
@@ -81,12 +81,12 @@ Dependencias de ejecución:
 - Tesseract con datos de idioma inglés y español
 - zbar
 
-El paquete Arch/CachyOS es el objetivo principal. Los paquetes Debian y Fedora son experimentales y el host debe proporcionar un runtime Electron 42 compatible.
+El paquete Arch/CachyOS es el objetivo principal. Los paquetes Debian y Fedora son objetivos experimentales de portabilidad. Todos incluyen el runtime upstream y requieren bibliotecas compatibles del host.
 
 Los paquetes generados usan metadatos de licencia `Custom` porque agregan material propio del repositorio y componentes upstream sometidos a términos distintos. Las licencias se instalan bajo `/usr/share/licenses/codex-ui-linux-port`.
 
 ## Autoridad del build de release
 
-GitHub Actions es el builder autoritativo de los artefactos publicados. Cada ejecución valida la versión interna del DMG oficial, su SHA256, el manifiesto, los nombres y la integridad de todos los paquetes antes de crear o actualizar una release.
+GitHub Actions es el builder autoritativo de los artefactos publicados. Cada ejecución valida la huella de la clave, el índice firmado, el SHA-256 del DEB oficial, el manifiesto, los nombres y la integridad de todos los paquetes antes de crear o actualizar una release.
 
 Los builds locales sirven para bootstrap, depuración y smoke tests; no son la fuente de verdad de releases futuras.

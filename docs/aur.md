@@ -28,3 +28,19 @@ scripts/update-aur-metadata
 ```bash
 makepkg -sf
 ```
+
+---
+
+# Preparación para AUR
+
+El repositorio incluye metadata futura en `packaging/aur` para `codex-ui-linux-port-bin`. El paquete todavía no está publicado.
+
+Antes de publicarlo:
+
+1. Revisa redistribución y marcas.
+2. Confirma que los assets pueden ser públicos.
+3. Verifica URLs y checksums.
+4. Revisa `docs/publication.md`.
+5. Ejecuta `scripts/update-aur-metadata`.
+6. Regenera `.SRCINFO`.
+7. Compila localmente con `makepkg -sf`.

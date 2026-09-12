@@ -4,19 +4,39 @@ Release: 1
 Summary: Unofficial Codex UI Linux port
 License: Custom
 BuildArch: x86_64
-Requires: electron42
 Requires: nodejs
 Requires: curl
 Requires: jq
 Requires: desktop-file-utils
+Requires: alsa-lib
+Requires: at-spi2-core
+Requires: cairo
+Requires: cups-libs
+Requires: dbus-libs
+Requires: expat
+Requires: gtk3
+Requires: libdrm
+Requires: libnotify
+Requires: libusb1
+Requires: libX11
+Requires: libxcb
+Requires: libXcomposite
+Requires: libXdamage
+Requires: libXext
+Requires: libXfixes
+Requires: libxkbcommon
+Requires: libXrandr
+Requires: mesa-libgbm
+Requires: nspr
+Requires: nss
+Requires: pango
+Requires: xdg-utils
 Requires: python3-pyside6
 Requires: spectacle
 Requires: tesseract
 Requires: tesseract-langpack-eng
 Requires: tesseract-langpack-spa
 Requires: zbar
-Recommends: ydotool
-Recommends: xdotool
 
 %description
 Unofficial packaging automation for Codex UI.

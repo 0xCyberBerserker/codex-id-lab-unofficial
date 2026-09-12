@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INSTALL_ROOT="${1:?install root required}"
+VERSION="${2:?version required}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -x "$INSTALL_ROOT/ChatGPT" && -x "$INSTALL_ROOT/resources/codex" ]] || {
+  echo "install-linux-integration: incomplete official runtime" >&2
+  exit 1
+}
+
+mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/share/icons/hicolor/scalable/apps" "$INSTALL_ROOT/share/systemd/user"
+install -m 644 "$SCRIPT_DIR/discord-rich-presence.js" "$INSTALL_ROOT/share/discord-rich-presence.js"
+install -m 755 "$SCRIPT_DIR/codex-ui-companion.py" "$INSTALL_ROOT/share/codex-ui-companion.py"
+install -m 644 "$SCRIPT_DIR/../resources/codex-ui-tools.desktop" "$INSTALL_ROOT/share/codex-ui-tools.desktop"
+install -m 644 "$SCRIPT_DIR/../resources/codex-ui-companion.service" "$INSTALL_ROOT/share/systemd/user/codex-ui-companion.service"
+
+cat > "$INSTALL_ROOT/bin/codex-cli-wrapper" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+bundled="/opt/codex-ui-linux-port/resources/codex"
+if [[ -x "$bundled" ]]; then
+  exec "$bundled" "$@"
+fi
+if command -v codex >/dev/null 2>&1; then
+  exec codex "$@"
+fi
+echo "codex-cli-wrapper: Codex CLI is not available" >&2
+exit 127
+EOF
+
+cat > "$INSTALL_ROOT/bin/codex-ui-linux" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="/opt/codex-ui-linux-port"
+RUNTIME="\$APP_ROOT/ChatGPT"
+
+# Do not leak a parent Codex CLI session into the desktop runtime.
+unset CODEX_CI CODEX_SESSION_ID CODEX_THREAD_ID CODEX_MANAGED_BY_NPM
+unset CODEX_MANAGED_PACKAGE_ROOT CODEX_SHELL CODEX_INTERNAL_ORIGINATOR_OVERRIDE
+
+if [[ "\${1:-}" == "--version" ]]; then
+  echo "codex-ui-linux $VERSION"
+  exit 0
+fi
+
+runtime_args=()
+locale_value="\${CODEXUI_LANG:-\${LC_ALL:-\${LC_MESSAGES:-\${LANG:-}}}}"
+locale_value="\${locale_value%%.*}"
+locale_value="\${locale_value%%@*}"
+locale_value="\${locale_value//_/-}"
+if [[ -n "\$locale_value" && "\$locale_value" != "C" && "\$locale_value" != "POSIX" ]]; then
+  runtime_args+=(--lang="\$locale_value")
+fi
+if [[ -n "\${CODEXUI_OZONE_PLATFORM:-}" ]]; then
+  runtime_args+=(--ozone-platform="\$CODEXUI_OZONE_PLATFORM")
+  if [[ "\$CODEXUI_OZONE_PLATFORM" == "wayland" ]]; then
+    runtime_args+=(--enable-features=GlobalShortcutsPortal)
+  fi
+fi
+if [[ -n "\${CODEXUI_ELECTRON_FLAGS:-}" ]]; then
+  read -r -a configured_flags <<< "\$CODEXUI_ELECTRON_FLAGS"
+  runtime_args+=("\${configured_flags[@]}")
+fi
+
+discord_config="\${XDG_CONFIG_HOME:-\$HOME/.config}/codex-ui-linux-port/discord-rich-presence.json"
+if [[ -f "\$discord_config" ]]; then
+  if [[ "\${CODEXUI_DISCORD_RPC_DEBUG:-0}" == "1" ]]; then
+    /usr/bin/node "\$APP_ROOT/share/discord-rich-presence.js" "\$discord_config" &
+  else
+    /usr/bin/node "\$APP_ROOT/share/discord-rich-presence.js" "\$discord_config" >/dev/null 2>&1 &
+  fi
+fi
+
+exec "\$RUNTIME" "\${runtime_args[@]}" "\$@"
+EOF
+
+cat > "$INSTALL_ROOT/bin/codex-ui-tools" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+export CODEXUI_CODEX_COMMAND="${CODEXUI_CODEX_COMMAND:-/opt/codex-ui-linux-port/bin/codex-cli-wrapper}"
+exec /usr/bin/python3 /opt/codex-ui-linux-port/share/codex-ui-companion.py "$@"
+EOF
+
+chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux" "$INSTALL_ROOT/bin/codex-ui-tools"
+
+cat > "$INSTALL_ROOT/share/codex-ui-linux.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=ChatGPT (Codex UI Linux Port)
+Name[es]=ChatGPT (Codex UI Linux Port)
+Comment=Unofficial Linux package using the official ChatGPT runtime
+Comment[es]=Paquete Linux no oficial con el runtime oficial de ChatGPT
+Exec=codex-ui-linux %U
+Icon=codex-ui-linux
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=true
+MimeType=x-scheme-handler/codex;
+Actions=Usage;OCR;QR;Crashes;
+
+[Desktop Action Usage]
+Name=Codex usage
+Name[es]=Uso de Codex
+Exec=codex-ui-tools panel
+Icon=view-statistics
+
+[Desktop Action OCR]
+Name=Capture text (OCR)
+Name[es]=Capturar texto (OCR)
+Exec=codex-ui-tools ocr
+Icon=edit-select-text
+
+[Desktop Action QR]
+Name=Capture QR privately
+Name[es]=Capturar QR de forma privada
+Exec=codex-ui-tools qr
+Icon=view-barcode-qr
+
+[Desktop Action Crashes]
+Name=Crash reports
+Name[es]=Informes de fallos
+Exec=codex-ui-tools crashes
+Icon=tools-report-bug
+EOF
+
+cat > "$INSTALL_ROOT/share/icons/hicolor/scalable/apps/codex-ui-linux.svg" <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#111827"/>
+  <path d="M256 72 414 164v184L256 440 98 348V164L256 72Z" fill="none" stroke="#67e8f9" stroke-width="34" stroke-linejoin="round"/>
+  <path d="M256 144 352 200v112l-96 56-96-56V200l96-56Z" fill="none" stroke="#a7f3d0" stroke-width="28" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="38" fill="#67e8f9"/>
+</svg>
+EOF

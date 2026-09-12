@@ -36,7 +36,7 @@ GitHub Actions is the only authoritative release builder. It always downloads th
 
 Release assets must include:
 
-- `Codex-$VERSION.dmg`
+- `chatgpt_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
 - `codex-ui-linux-port_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
@@ -48,3 +48,29 @@ If redistribution constraints change, remove public release assets and keep only
 ## License Boundary
 
 Repository-authored automation, Linux patches, packaging metadata, website material, and documentation use the PolyForm Noncommercial License 1.0.0. This license does not cover upstream software, application assets, release metadata, trademarks, or third-party dependencies. Generated packages retain `Custom` package-license metadata because they are aggregate artifacts.
+
+---
+
+# Política de publicación y releases
+
+Este repositorio contiene automatización pública y no oficial para empaquetar Codex UI en Linux. Los assets son públicos; AUR está preparado, pero no publicado. GitHub Actions es el único builder autoritativo.
+
+## Salvaguardas
+
+1. Revisa las condiciones upstream de redistribución y marcas.
+2. Mantén explícito el carácter no oficial.
+3. Ejecuta `scripts/privacy-audit` desde un checkout limpio.
+4. No publiques usuarios, rutas locales, chats, perfiles, bases runtime, tokens ni claves.
+5. Genera los assets únicamente mediante GitHub Actions.
+6. No sugieras soporte oficial de OpenAI.
+
+## Assets requeridos
+
+- `chatgpt_$VERSION_amd64.deb`
+- `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
+- `codex-ui-linux-port_$VERSION_amd64.deb`
+- `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
+- `manifest.json`
+- `checksums.txt`
+
+Si cambian las condiciones de redistribución, deben retirarse los binarios públicos y conservarse sólo la automatización. PolyForm Noncommercial License 1.0.0 cubre únicamente el material original del repositorio; los componentes upstream conservan sus términos.

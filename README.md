@@ -22,14 +22,14 @@
   <sub>Made with 🖤 in Barcelona City 🇪🇸</sub>
 </p>
 
-This repository rebuilds upstream Codex UI release artifacts into Linux packages for Codex UI through auditable scripts and GitHub Actions, with packaging targets for Arch, CachyOS, Debian, Ubuntu, and RPM-based distributions.
+This repository repackages the official ChatGPT Linux runtime through auditable scripts and GitHub Actions, with targets for Arch, CachyOS, Debian, Ubuntu, and RPM-based distributions.
 
 ## Project Signal
 
 | Area | Current signal |
 | --- | --- |
 | Release builder | GitHub Actions is authoritative |
-| Source tracking | Upstream appcast, current source archive, SHA256 manifest |
+| Source tracking | Signed official Linux repository, package SHA256 manifest |
 | Linux targets | Arch/CachyOS, Debian/Ubuntu, Fedora/RHEL-like |
 | Public status | Public automation repository |
 | Data boundary | No chats, credentials, runtime state, private data, or local paths |
@@ -40,7 +40,7 @@ This repository rebuilds upstream Codex UI release artifacts into Linux packages
 - Arch/CachyOS package: `.pkg.tar.zst`
 - Debian/Ubuntu package: `.deb` (experimental)
 - Fedora/RHEL-like package: `.rpm` (experimental)
-- Latest official macOS source asset: `Codex-$VERSION.dmg`
+- Verified official Linux source package: `chatgpt_$VERSION_amd64.deb`
 - Release manifest and checksums
 - Native Qt companion for usage, OCR, private QR capture, and safe crash metadata
 - Future AUR metadata under `packaging/aur`
@@ -50,8 +50,8 @@ This repository rebuilds upstream Codex UI release artifacts into Linux packages
 Codex UI changes frequently. Linux users need a repeatable path that can:
 
 - fetch the current upstream source archive
-- rebuild native modules for Linux
-- apply Linux desktop patches, including audio-only microphone access and toggle-style global dictation
+- preserve the official Linux-native Owl runtime and modules
+- inherit upstream voice, dictation, app tools, plugins, and future features without patching minified bundles
 - package the app for common Linux families
 - verify artifacts before release
 - keep private runtime data out of git
@@ -88,21 +88,19 @@ The legacy `codexui-update` command remains available as a compatibility alias a
 
 GitHub Actions is the authoritative builder.
 
-Every scheduled or manual run reads the latest version from the official appcast, downloads the current official `Codex.dmg`, verifies its internal application version, computes its SHA256, compares the source and Linux build-recipe fingerprints with the existing release manifest, and verifies every existing asset against `checksums.txt`. It rebuilds only when needed. If the same version tag exists but the source, Linux patches, packaging inputs, or any published artifact changed, release assets are refreshed with `--clobber`.
+Every scheduled or manual run downloads the current official Linux package, pins and validates the repository signing-key fingerprint, verifies `InRelease`, checks the package against the signed index, and compares source and build-recipe fingerprints with the existing release. It rebuilds only when needed and refreshes changed assets with `--clobber`.
 
 ### Automatic Feature Tracking
 
-Each run preserves upstream features and applies only the Linux compatibility patches. On Wayland, global dictation uses Electron's shortcut portal and a toggle shortcut. Automatic paste uses `ydotool`; X11 can also use `xdotool`. Hold-to-dictate stays hidden because Electron does not expose the global key-release event on Linux.
+Each run preserves the official Linux runtime unchanged. Voice, dictation, native app tools, plugins, and later upstream features arrive with the next signed official package. XWayland remains the default; native Wayland can be requested with `CODEXUI_OZONE_PLATFORM=wayland` and remains experimental upstream.
 
 ### Seguimiento automático de funciones
 
-Cada ejecución programada o manual obtiene el bundle oficial más reciente, conserva sus funciones upstream y aplica sólo los patches de compatibilidad necesarios para Linux, incluido el permiso exclusivo de audio para voz y dictado. La huella de la receta de build obliga a reconstruir una versión existente cuando cambian esos patches o sus inputs de empaquetado.
-
-En Wayland, el dictado global usa el portal de atajos de Electron y un atajo de tipo alternar. El pegado automático usa `ydotool`; en X11 también admite `xdotool`. El modo de mantener pulsado permanece oculto en Linux porque Electron no expone el evento global de liberación de tecla.
+Cada ejecución conserva sin modificar el runtime Linux oficial. Voz, dictado, herramientas nativas, plugins y funciones upstream posteriores llegan con el siguiente paquete oficial firmado. XWayland sigue siendo el modo predeterminado; Wayland nativo puede solicitarse con `CODEXUI_OZONE_PLATFORM=wayland` y continúa siendo experimental upstream.
 
 Required release assets:
 
-- `Codex-$VERSION.dmg`
+- `chatgpt_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
 - `codex-ui-linux-port_$VERSION_amd64.deb`
 - `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
@@ -112,7 +110,7 @@ Required release assets:
 Local builds are supported for bootstrap and debugging:
 
 ```bash
-scripts/build-from-dmg --source /path/to/Codex.dmg
+scripts/build-from-linux --source /path/to/chatgpt_amd64.deb
 ```
 
 ## Repository Boundary

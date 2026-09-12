@@ -5,8 +5,7 @@ pkgdesc="Unofficial Codex UI Linux port"
 arch=('x86_64')
 url="https://github.com/0xCyberBerserker/codex-ui-linux-port"
 license=('custom')
-depends=('electron42' 'nodejs' 'curl' 'jq' 'desktop-file-utils' 'pyside6' 'spectacle' 'tesseract' 'tesseract-data-eng' 'tesseract-data-spa' 'zbar')
-optdepends=('ydotool: automatic dictation paste on Wayland' 'xdotool: automatic dictation paste on X11')
+depends=('alsa-lib' 'at-spi2-core' 'cairo' 'cups' 'dbus' 'expat' 'gcc-libs' 'gdk-pixbuf2' 'glib2' 'gtk3' 'libdrm' 'libnotify' 'libusb' 'libx11' 'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'nodejs' 'curl' 'jq' 'desktop-file-utils' 'pyside6' 'spectacle' 'tesseract' 'tesseract-data-eng' 'tesseract-data-spa' 'zbar')
 source=("${pkgname}-${pkgver}-1-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-ui-linux-port/releases/download/v${pkgver}/codex-ui-linux-port-${pkgver}-1-x86_64.pkg.tar.zst")
 sha256sums=('SKIP')
 

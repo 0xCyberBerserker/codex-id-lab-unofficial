@@ -2,14 +2,13 @@
 
 ## English
 
-Codex UI Linux Port is packaging automation around upstream Codex UI release artifacts. It does not own or modify upstream product behavior beyond Linux packaging patches required for desktop integration.
+Codex UI Linux Port is packaging automation around the official ChatGPT Linux runtime. It preserves the upstream application bundle and adds only package-manager, launcher, updater, and companion integration.
 
 ```mermaid
 flowchart LR
-    appcast["Upstream appcast"] --> source["Official source asset"]
-    source --> verify["Version and SHA256 verification"]
-    verify --> patch["Linux patches and native rebuild"]
-    patch --> packages["Arch, Debian, RPM packages"]
+    repository["Signed Linux repository"] --> verify["Signature, index and SHA256 verification"]
+    verify --> source["Official Linux runtime"]
+    source --> packages["Arch, Debian, RPM packages"]
     packages --> release["GitHub release assets"]
     release --> updater["codex-ui-update"]
     packages --> companion["Native Qt companion"]
@@ -18,10 +17,9 @@ flowchart LR
 ```
 
 ```text
-Upstream appcast
-  -> Official source asset
-  -> Version and SHA256 verification
-  -> Linux patches and native rebuild
+Signed Linux repository
+  -> Signature, index, and SHA256 verification
+  -> Official Linux runtime
   -> Arch, Debian, and RPM packages
   -> GitHub release assets
   -> codex-ui-update
@@ -29,14 +27,14 @@ Upstream appcast
 
 ## Components
 
-- `scripts/build-from-dmg`: extracts the official source asset, rebuilds native modules, applies Linux patches, and produces packages.
-- `scripts/build-recipe-sha`: fingerprints package-affecting inputs so a patch change rebuilds an existing upstream version.
-- `scripts/apply-linux-patches`: grants audio-only media permission, enables portal-backed toggle dictation on Linux, and retains the existing denial for camera access.
+- `scripts/resolve-linux-source`: verifies the official repository and resolves the current Linux package.
+- `scripts/build-from-linux`: extracts the official runtime unchanged, adds local integration, and produces packages.
+- `scripts/build-recipe-sha`: fingerprints package-affecting inputs so an integration change rebuilds an existing upstream version.
+- `scripts/install-linux-integration`: installs the launcher, updater hooks, desktop entry, and companion files.
 - `scripts/build-packages`: creates Arch, Debian, and RPM package outputs from a prepared package root.
 - `scripts/validate-release-artifacts`: validates the expected release asset set and checksums.
 - `scripts/codex-ui-update`: detects the host package manager, downloads the matching package, verifies checksums, installs, and can smoke-test.
 - `scripts/codex-ui-companion.py`: provides a separate native Qt process for local usage, capture, and filtered crash metadata.
-- `tools/`: pinned Node.js tooling for reproducible native module rebuilds.
 - `packaging/`: package metadata templates.
 - `docs/`: usage, packaging, security, publication, and AUR notes.
 
@@ -55,18 +53,18 @@ Upstream appcast
 
 ## Español
 
-Codex UI Linux Port es automatización de empaquetado alrededor de artefactos upstream de Codex UI. No posee ni modifica el comportamiento del producto upstream más allá de patches de empaquetado necesarios para integración Linux.
+Codex UI Linux Port automatiza el empaquetado del runtime Linux oficial de ChatGPT. Conserva el bundle upstream y añade únicamente integración con gestores de paquetes, launcher, updater y companion.
 
 ## Componentes
 
-- `scripts/build-from-dmg`: extrae el artefacto oficial, recompila módulos nativos, aplica patches Linux y produce paquetes.
-- `scripts/build-recipe-sha`: genera la huella de los inputs que afectan al paquete para que un cambio de patch reconstruya una versión upstream ya existente.
-- `scripts/apply-linux-patches`: concede permisos multimedia sólo para audio, habilita en Linux el dictado alternable mediante el portal de atajos y mantiene denegado el acceso a la cámara.
+- `scripts/resolve-linux-source`: verifica el repositorio oficial y resuelve el paquete Linux actual.
+- `scripts/build-from-linux`: extrae sin cambios el runtime oficial, añade la integración local y produce paquetes.
+- `scripts/build-recipe-sha`: genera la huella de los inputs que afectan al paquete para reconstruir una versión upstream cuando cambia la integración.
+- `scripts/install-linux-integration`: instala el launcher, los hooks del updater, la entrada de escritorio y los archivos del companion.
 - `scripts/build-packages`: crea salidas Arch, Debian y RPM desde un package root preparado.
 - `scripts/validate-release-artifacts`: valida el conjunto esperado de assets de release y checksums.
 - `scripts/codex-ui-update`: detecta el gestor de paquetes del host, descarga el paquete compatible, verifica checksums, instala y puede ejecutar smoke test.
 - `scripts/codex-ui-companion.py`: aporta un proceso Qt nativo separado para consumo local, capturas y metadatos filtrados de fallos.
-- `tools/`: tooling Node.js fijado para recompilar módulos nativos de forma reproducible.
 - `packaging/`: plantillas de metadata de paquetes.
 - `docs/`: notas de uso, empaquetado, seguridad, publicación y AUR.
 

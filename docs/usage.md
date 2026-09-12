@@ -28,11 +28,11 @@ codex-ui-update --smoke
 
 `codexui-update` remains available as a compatibility alias with the same flags.
 
-The smoke test launches Codex UI with a temporary profile and checks for a successful startup log.
+The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 
 ## Voice And Dictation
 
-Voice chat and dictation use the microphone selected under Codex UI settings. The Linux patch grants the app session microphone audio only; camera and screen capture remain denied by this permission path.
+Voice chat and dictation come from the official Linux runtime and use the microphone selected under Codex UI settings. The desktop portal or session policy must also allow microphone access.
 
 Update to the latest rebuilt package before testing:
 
@@ -44,7 +44,7 @@ If no input is listed, confirm that PipeWire exposes a default source, then reop
 
 ## Runtime Overrides
 
-The launcher follows the host locale and Electron's native display backend selection. Optional overrides:
+The launcher follows the host locale and the official runtime's display backend selection. Optional overrides:
 
 ```bash
 CODEXUI_LANG=es-ES codex-ui-linux
@@ -76,7 +76,7 @@ No client secret or API key is required.
 
 ## Voz y dictado (Español)
 
-El chat por voz y el dictado usan el micrófono seleccionado en los ajustes de Codex UI. El patch para Linux concede a la sesión de la app acceso exclusivo al audio del micrófono; la cámara y la captura de pantalla siguen denegadas por esta vía de permisos.
+El chat por voz y el dictado proceden del runtime Linux oficial y usan el micrófono seleccionado en los ajustes de Codex UI. El portal del escritorio o la política de sesión también deben permitir el acceso al micrófono.
 
 Actualiza al último paquete reconstruido antes de probar:
 

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_BASE="https://persistent.oaistatic.com/codex-app-prod/linux/deb"
+LATEST_URL="$REPO_BASE/latest/chatgpt_amd64.deb"
+EXPECTED_FINGERPRINT="3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4"
+OUTPUT="ChatGPT-source.deb"
+GITHUB_OUTPUT_FILE=""
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/resolve-linux-source [--output FILE] [--github-output FILE]
+
+Downloads the current official Linux package and verifies it against the
+signed OpenAI APT repository metadata.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output) shift; OUTPUT="${1:-}" ;;
+    --github-output) shift; GITHUB_OUTPUT_FILE="${1:-}" ;;
+    --help|-h) usage; exit 0 ;;
+    *) echo "resolve-linux-source: unknown option: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[[ -n "$OUTPUT" ]] || { echo "resolve-linux-source: output path is empty" >&2; exit 2; }
+
+for command in curl dpkg-deb gpg gpgv base64 python3 sha256sum stat; do
+  command -v "$command" >/dev/null 2>&1 || {
+    echo "resolve-linux-source: missing command: $command" >&2
+    exit 2
+  }
+done
+
+workdir="$(mktemp -d)"
+trap 'rm -rf "$workdir"' EXIT
+
+curl -fsSL --retry 3 "$LATEST_URL" -o "$workdir/chatgpt.deb"
+dpkg-deb -e "$workdir/chatgpt.deb" "$workdir/control"
+
+key_base64="$(sed -n "s/^SIGNING_KEY_BASE64='\(.*\)'$/\1/p" "$workdir/control/postinst")"
+[[ -n "$key_base64" ]] || { echo "resolve-linux-source: repository key not found" >&2; exit 1; }
+printf '%s' "$key_base64" | base64 -d > "$workdir/repository.gpg"
+
+fingerprint="$(gpg --batch --show-keys --with-colons "$workdir/repository.gpg" | awk -F: '$1 == "fpr" { print $10; exit }')"
+[[ "$fingerprint" == "$EXPECTED_FINGERPRINT" ]] || {
+  echo "resolve-linux-source: repository key fingerprint mismatch" >&2
+  exit 1
+}
+
+curl -fsSL --retry 3 "$REPO_BASE/dists/stable/InRelease" -o "$workdir/InRelease"
+curl -fsSL --retry 3 "$REPO_BASE/dists/stable/main/binary-amd64/Packages.gz" -o "$workdir/Packages.gz"
+gpgv --keyring "$workdir/repository.gpg" "$workdir/InRelease" >/dev/null
+
+mapfile -t metadata < <(python3 - "$workdir/InRelease" "$workdir/Packages.gz" <<'PY'
+import gzip
+import hashlib
+import pathlib
+import re
+import sys
+
+inrelease = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+packages_path = pathlib.Path(sys.argv[2])
+packages_bytes = packages_path.read_bytes()
+index_path = "main/binary-amd64/Packages.gz"
+
+match = re.search(rf"^ ([0-9a-f]{{64}})\s+(\d+)\s+{re.escape(index_path)}$", inrelease, re.MULTILINE)
+if not match:
+    raise SystemExit("resolve-linux-source: Packages.gz checksum is missing from InRelease")
+expected_hash, expected_size = match.groups()
+if hashlib.sha256(packages_bytes).hexdigest() != expected_hash or len(packages_bytes) != int(expected_size):
+    raise SystemExit("resolve-linux-source: Packages.gz does not match signed metadata")
+
+records = gzip.decompress(packages_bytes).decode("utf-8").strip().split("\n\n")
+fields = None
+for record in records:
+    candidate = {}
+    for line in record.splitlines():
+        if ": " in line:
+            key, value = line.split(": ", 1)
+            candidate[key] = value
+    if candidate.get("Package") == "chatgpt" and candidate.get("Architecture") == "amd64":
+        fields = candidate
+        break
+if fields is None:
+    raise SystemExit("resolve-linux-source: chatgpt amd64 package not found")
+
+version = fields.get("Version", "")
+filename = fields.get("Filename", "")
+sha256 = fields.get("SHA256", "")
+size = fields.get("Size", "")
+if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+    raise SystemExit("resolve-linux-source: invalid package version")
+if not re.fullmatch(r"pool/[A-Za-z0-9_./+-]+\.deb", filename) or ".." in filename:
+    raise SystemExit("resolve-linux-source: unsafe package filename")
+if not re.fullmatch(r"[0-9a-f]{64}", sha256) or not size.isdigit():
+    raise SystemExit("resolve-linux-source: invalid package integrity metadata")
+print(version)
+print(filename)
+print(sha256)
+print(size)
+PY
+)
+
+version="${metadata[0]}"
+filename="${metadata[1]}"
+expected_sha="${metadata[2]}"
+expected_size="${metadata[3]}"
+actual_sha="$(sha256sum "$workdir/chatgpt.deb" | awk '{print $1}')"
+actual_size="$(stat -c '%s' "$workdir/chatgpt.deb")"
+
+[[ "$actual_sha" == "$expected_sha" && "$actual_size" == "$expected_size" ]] || {
+  echo "resolve-linux-source: latest package does not match signed repository metadata" >&2
+  exit 1
+}
+[[ "$(dpkg-deb -f "$workdir/chatgpt.deb" Package)" == "chatgpt" ]] || exit 1
+[[ "$(dpkg-deb -f "$workdir/chatgpt.deb" Version)" == "$version" ]] || exit 1
+[[ "$(dpkg-deb -f "$workdir/chatgpt.deb" Architecture)" == "amd64" ]] || exit 1
+
+mv "$workdir/chatgpt.deb" "$OUTPUT"
+source_url="$REPO_BASE/$filename"
+
+if [[ -n "$GITHUB_OUTPUT_FILE" ]]; then
+  {
+    echo "version=$version"
+    echo "source_url=$source_url"
+    echo "source_sha=$expected_sha"
+  } >> "$GITHUB_OUTPUT_FILE"
+fi
+
+echo "resolve-linux-source: verified chatgpt $version ($expected_sha)"

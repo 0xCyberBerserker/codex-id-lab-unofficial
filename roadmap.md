@@ -13,7 +13,7 @@
 ## Next
 
 - Keep the updater aligned with current GitHub release asset layout.
-- Keep Linux patches minimal and revalidated against upstream UI changes.
+- Keep the official Linux runtime unmodified and track its signed repository.
 - Continue separating local package validation from remote host version drift.
 - Keep AUR metadata prepared until publication is explicitly approved.
 
@@ -39,7 +39,7 @@
 ## Próximo
 
 - Mantener el updater alineado con el layout actual de assets de GitHub Releases.
-- Mantener los patches Linux mínimos y revalidados contra cambios upstream de UI.
+- Mantener sin modificar el runtime Linux oficial y seguir su repositorio firmado.
 - Separar validación local de paquetes de drift de versión en hosts remotos.
 - Mantener metadata AUR preparada hasta aprobación explícita de publicación.
 

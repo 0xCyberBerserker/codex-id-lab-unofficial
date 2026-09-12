@@ -1,7 +1,5 @@
 {
-  "codexUiVersion": "26.602.71036",
-  "electronVersion": "42.1.0",
-  "sourceDmgSha256": "42d56cfa58f9c03c9069b8f1ea29b38d99932d21495c5ec2b10367c739db0b0f",
-  "dmgUrl": "https://persistent.oaistatic.com/codex-app-prod/Codex.dmg",
-  "appcastUrl": "https://persistent.oaistatic.com/codex-app-prod/appcast.xml"
+  "sourcePlatform": "linux",
+  "repositoryUrl": "https://persistent.oaistatic.com/codex-app-prod/linux/deb",
+  "repositoryKeyFingerprint": "3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4"
 }

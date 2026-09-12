@@ -49,22 +49,47 @@ packager = unofficial automation
 size = $(du -sb "$arch_root" | awk '{print $1}')
 arch = $ARCH
 license = custom
-depend = electron42
 depend = nodejs
 depend = curl
 depend = jq
 depend = desktop-file-utils
+depend = alsa-lib
+depend = at-spi2-core
+depend = cairo
+depend = cups
+depend = dbus
+depend = expat
+depend = gcc-libs
+depend = gdk-pixbuf2
+depend = glib2
+depend = gtk3
+depend = libdrm
+depend = libnotify
+depend = libusb
+depend = libx11
+depend = libxcb
+depend = libxcomposite
+depend = libxdamage
+depend = libxext
+depend = libxfixes
+depend = libxkbcommon
+depend = libxrandr
+depend = mesa
+depend = nspr
+depend = nss
+depend = pango
+depend = systemd-libs
+depend = xdg-utils
 depend = pyside6
 depend = spectacle
 depend = tesseract
 depend = tesseract-data-eng
 depend = tesseract-data-spa
 depend = zbar
-optdepend = ydotool: automatic dictation paste on Wayland
-optdepend = xdotool: automatic dictation paste on X11
 EOF
 cp "$DIST/.PKGINFO" "$arch_root/.PKGINFO"
 (cd "$arch_root" && bsdtar --zstd -cf "$DIST/${NAME}-${VERSION}-1-${ARCH}.pkg.tar.zst" .PKGINFO opt usr)
+rm -rf "$arch_root"
 
 deb_root="$DIST/deb-root"
 if command -v dpkg-deb >/dev/null 2>&1; then
@@ -76,13 +101,13 @@ Version: $VERSION
 Section: devel
 Priority: optional
 Architecture: amd64
-Depends: electron42, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
-Suggests: ydotool, xdotool
+Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, libasound2, libcups2, libdbus-1-3, libx11-6, libx11-xcb1, libxcb1, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxkbcommon0, libxrandr2, mesa-vulkan-drivers | vulkan-icd, nodejs, curl, jq, desktop-file-utils, python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
 Maintainer: unofficial automation
 Description: Unofficial Codex UI Linux port
  Unofficial packaging automation for Codex UI.
 EOF
   dpkg-deb --build "$deb_root" "$DIST/${NAME}_${VERSION}_amd64.deb" >/dev/null
+  rm -rf "$deb_root"
 else
   echo "build-packages: dpkg-deb not found; deb package skipped" >&2
 fi
@@ -90,7 +115,8 @@ fi
 rpm_root="$DIST/rpm-root"
 if command -v rpmbuild >/dev/null 2>&1; then
   stage_common "$rpm_root"
-  tar -C "$rpm_root" -czf "$DIST/${NAME}-${VERSION}-payload.tar.gz" .
+  tar -C "$rpm_root" -cf "$DIST/${NAME}-${VERSION}-payload.tar" .
+  rm -rf "$rpm_root"
   cat > "$DIST/${NAME}.spec" <<EOF
 %global __brp_strip_static_archive %{nil}
 Name: $NAME
@@ -99,19 +125,39 @@ Release: 1
 Summary: Unofficial Codex UI Linux port
 License: Custom
 BuildArch: x86_64
-Requires: electron42
 Requires: nodejs
 Requires: curl
 Requires: jq
 Requires: desktop-file-utils
+Requires: alsa-lib
+Requires: at-spi2-core
+Requires: cairo
+Requires: cups-libs
+Requires: dbus-libs
+Requires: expat
+Requires: gtk3
+Requires: libdrm
+Requires: libnotify
+Requires: libusb1
+Requires: libX11
+Requires: libxcb
+Requires: libXcomposite
+Requires: libXdamage
+Requires: libXext
+Requires: libXfixes
+Requires: libxkbcommon
+Requires: libXrandr
+Requires: mesa-libgbm
+Requires: nspr
+Requires: nss
+Requires: pango
+Requires: xdg-utils
 Requires: python3-pyside6
 Requires: spectacle
 Requires: tesseract
 Requires: tesseract-langpack-eng
 Requires: tesseract-langpack-spa
 Requires: zbar
-Recommends: ydotool
-Recommends: xdotool
 
 %description
 Unofficial packaging automation for Codex UI.
@@ -122,7 +168,7 @@ Unofficial packaging automation for Codex UI.
 
 %install
 mkdir -p %{buildroot}
-tar -xzf %{_sourcedir}/${NAME}-${VERSION}-payload.tar.gz -C %{buildroot}
+tar -xf %{_sourcedir}/${NAME}-${VERSION}-payload.tar -C %{buildroot}
 
 %files
 /opt/codex-ui-linux-port
@@ -140,11 +186,14 @@ EOF
   rpmbuild --define "_topdir $DIST/rpmbuild" \
     --define "_sourcedir $DIST" \
     --define "_rpmdir $DIST" \
+    --define "_binary_payload w7T0.zstdio" \
     -bb "$DIST/${NAME}.spec" >/dev/null
-  find "$DIST" -name '*.rpm' -type f -exec cp {} "$DIST/${NAME}-${VERSION}-1.x86_64.rpm" \;
+  built_rpm="$(find "$DIST/$ARCH" -name '*.rpm' -type f -print -quit)"
+  [[ -n "$built_rpm" ]] || { echo "build-packages: RPM output not found" >&2; exit 1; }
+  cp "$built_rpm" "$DIST/${NAME}-${VERSION}-1.x86_64.rpm"
 else
   echo "build-packages: rpmbuild not found; rpm package skipped" >&2
 fi
 
-rm -rf "$DIST/arch-root" "$DIST/deb-root" "$DIST/rpm-root" "$DIST/rpmbuild"
-rm -f "$DIST/.PKGINFO" "$DIST/${NAME}.spec" "$DIST/${NAME}-${VERSION}-payload.tar.gz"
+rm -rf "$DIST/arch-root" "$DIST/deb-root" "$DIST/rpm-root" "$DIST/rpmbuild" "$DIST/x86_64"
+rm -f "$DIST/.PKGINFO" "$DIST/${NAME}.spec" "$DIST/${NAME}-${VERSION}-payload.tar"

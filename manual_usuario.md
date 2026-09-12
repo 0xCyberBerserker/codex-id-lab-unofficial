@@ -24,9 +24,9 @@ codex-ui-update --smoke
 
 The legacy `codexui-update` command remains available as a compatibility alias with the same flags.
 
-The smoke test launches Codex UI with a temporary profile and checks for a startup marker.
+The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 
-Voice and composer dictation use the selected PipeWire microphone. Global dictation on Linux supports the toggle shortcut: press once to start and again to stop. Automatic paste requires `ydotool` on Wayland or `xdotool` on X11.
+Voice and composer dictation are provided by the official Linux runtime and use the selected PipeWire microphone. Microphone access must also be allowed by the desktop portal or session policy.
 
 ## Local Companion
 
@@ -80,9 +80,9 @@ codex-ui-update --smoke
 
 El comando anterior `codexui-update` permanece disponible como alias compatible con los mismos flags.
 
-El smoke test lanza Codex UI con un perfil temporal y comprueba una marca de arranque correcto.
+El smoke test lanza Codex UI con un perfil temporal y comprueba que el runtime nativo permanece activo.
 
-La voz y el dictado del compositor usan el micrófono PipeWire seleccionado. El dictado global en Linux admite el atajo alternable: púlsalo una vez para iniciar y otra para detener. El pegado automático requiere `ydotool` en Wayland o `xdotool` en X11.
+La voz y el dictado del compositor los proporciona el runtime Linux oficial y usan el micrófono PipeWire seleccionado. El portal del escritorio o la política de sesión también deben permitir el acceso al micrófono.
 
 ## Companion local
 

@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE=""
+SOURCE_URL=""
+VERSION=""
+WORKDIR="$ROOT/build/work"
+DIST="$ROOT/dist"
+
+usage() {
+  echo "Usage: scripts/build-from-linux --source chatgpt_amd64.deb [--source-url URL] [--version VERSION]"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --source) shift; SOURCE="${1:-}" ;;
+    --source-url) shift; SOURCE_URL="${1:-}" ;;
+    --version) shift; VERSION="${1:-}" ;;
+    --help|-h) usage; exit 0 ;;
+    *) echo "build-from-linux: unknown option: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[[ -f "$SOURCE" ]] || { echo "build-from-linux: source package not found: $SOURCE" >&2; exit 2; }
+for command in dpkg-deb sha256sum jq; do
+  command -v "$command" >/dev/null 2>&1 || { echo "build-from-linux: missing command: $command" >&2; exit 2; }
+done
+
+package_name="$(dpkg-deb -f "$SOURCE" Package)"
+detected_version="$(dpkg-deb -f "$SOURCE" Version)"
+architecture="$(dpkg-deb -f "$SOURCE" Architecture)"
+[[ "$package_name" == "chatgpt" && "$architecture" == "amd64" ]] || {
+  echo "build-from-linux: expected the official chatgpt amd64 package" >&2
+  exit 1
+}
+if [[ -z "$VERSION" ]]; then
+  VERSION="$detected_version"
+elif [[ "$VERSION" != "$detected_version" ]]; then
+  echo "build-from-linux: source version mismatch: expected $VERSION, found $detected_version" >&2
+  exit 1
+fi
+
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR/source" "$DIST"
+dpkg-deb -x "$SOURCE" "$WORKDIR/source"
+
+runtime="$WORKDIR/source/usr/lib/chatgpt"
+[[ -x "$runtime/ChatGPT" && -f "$runtime/resources/app.asar" ]] || {
+  echo "build-from-linux: official runtime files are missing" >&2
+  exit 1
+}
+
+install_root="$WORKDIR/pkgroot/opt/codex-ui-linux-port"
+mkdir -p "$install_root"
+cp -a "$runtime"/. "$install_root/"
+if [[ -f "$WORKDIR/source/usr/share/doc/chatgpt/copyright" ]]; then
+  mkdir -p "$install_root/share"
+  install -m 644 "$WORKDIR/source/usr/share/doc/chatgpt/copyright" "$install_root/share/upstream-copyright"
+fi
+
+"$ROOT/scripts/install-linux-integration" "$install_root" "$VERSION"
+rm -rf "$WORKDIR/source"
+
+source_sha="$(sha256sum "$SOURCE" | awk '{print $1}')"
+build_recipe_sha="$("$ROOT/scripts/build-recipe-sha")"
+"$ROOT/scripts/build-packages" "$WORKDIR/pkgroot" "$VERSION" "$source_sha"
+
+source_archive_file="chatgpt_${VERSION}_amd64.deb"
+cp "$SOURCE" "$DIST/$source_archive_file"
+
+jq -n \
+  --arg version "$VERSION" \
+  --arg source_archive_file "$source_archive_file" \
+  --arg source_archive_url "$SOURCE_URL" \
+  --arg source_archive_sha256 "$source_sha" \
+  --arg build_recipe_sha256 "$build_recipe_sha" \
+  --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{version: $version, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-ui-linux-port"}' \
+  > "$DIST/manifest.json"
+
+(cd "$DIST" && find . -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.zst' -o -name 'manifest.json' \) -printf '%P\n' | sort | xargs -r sha256sum > checksums.txt)
+echo "build-from-linux: artifacts written to $DIST"

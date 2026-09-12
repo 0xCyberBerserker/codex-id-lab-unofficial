@@ -130,19 +130,19 @@ deps=()
 case " $id $id_like " in
   *" arch "*|*" cachyos "*)
     pkg_kind="pkg.tar.zst"
-    deps=(electron42 nodejs curl jq desktop-file-utils pyside6 spectacle tesseract tesseract-data-eng tesseract-data-spa zbar)
+    deps=(alsa-lib at-spi2-core cairo cups dbus expat gcc-libs gdk-pixbuf2 glib2 gtk3 libdrm libnotify libusb libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr mesa nspr nss pango systemd-libs xdg-utils nodejs curl jq desktop-file-utils pyside6 spectacle tesseract tesseract-data-eng tesseract-data-spa zbar)
     install_cmd=(pacman -U)
     [[ "$FORCE" -eq 1 ]] || install_cmd+=(--needed)
     ;;
   *" debian "*|*" ubuntu "*)
     pkg_kind="deb"
-    deps=(electron42 nodejs curl jq desktop-file-utils python3-pyside6.qtwidgets python3-pyside6.qtnetwork kde-spectacle tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa zbar-tools)
+    deps=(libgtk-3-0 libnotify4 libnss3 xdg-utils libatspi2.0-0 libdrm2 libgbm1 libxcb-dri3-0 libasound2 libcups2 libdbus-1-3 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 nodejs curl jq desktop-file-utils python3-pyside6.qtwidgets python3-pyside6.qtnetwork kde-spectacle tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa zbar-tools)
     install_cmd=(apt-get install -y)
     [[ "$FORCE" -eq 1 ]] && install_cmd+=(--reinstall)
     ;;
   *" fedora "*|*" rhel "*|*" centos "*)
     pkg_kind="rpm"
-    deps=(electron42 nodejs curl jq desktop-file-utils python3-pyside6 spectacle tesseract tesseract-langpack-eng tesseract-langpack-spa zbar)
+    deps=(alsa-lib at-spi2-core cairo cups-libs dbus-libs expat gtk3 libdrm libnotify libusb1 libX11 libxcb libXcomposite libXdamage libXext libXfixes libxkbcommon libXrandr mesa-libgbm nspr nss pango xdg-utils nodejs curl jq desktop-file-utils python3-pyside6 spectacle tesseract tesseract-langpack-eng tesseract-langpack-spa zbar)
     if [[ "$FORCE" -eq 1 ]]; then
       install_cmd=(dnf reinstall -y)
     else
@@ -305,9 +305,12 @@ sync_desktop_entry
 if [[ "$SMOKE" -eq 1 ]]; then
   profile="$(mktemp -d)"
   log="$tmpdir/smoke.log"
-  CODEX_ELECTRON_USER_DATA_PATH="$profile" timeout 20s codex-ui-linux >"$log" 2>&1 || true
-  if ! grep -E 'Codex CLI initialized|window ready-to-show' "$log" >/dev/null 2>&1; then
-    echo "$PROGRAM: smoke test did not find a successful startup marker" >&2
+  set +e
+  CODEX_ELECTRON_USER_DATA_PATH="$profile" timeout 20s codex-ui-linux >"$log" 2>&1
+  smoke_status=$?
+  set -e
+  if [[ "$smoke_status" -ne 124 ]]; then
+    echo "$PROGRAM: smoke test runtime exited early (status $smoke_status)" >&2
     tail -n 80 "$log" >&2
     exit 1
   fi

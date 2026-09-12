@@ -3,14 +3,6 @@ name: Build Codex UI Linux packages
 on:
   workflow_dispatch:
     inputs:
-      dmg_url:
-        description: "Optional official DMG URL override"
-        required: false
-        type: string
-      version:
-        description: "Optional version override"
-        required: false
-        type: string
       force_rebuild:
         description: "Force package rebuild even when the release appears fresh"
         required: false
@@ -36,82 +28,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "22.12.0"
-          cache: npm
-          cache-dependency-path: tools/package-lock.json
-
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y p7zip-full nodejs npm jq curl dpkg-dev rpm patch zstd libarchive-tools ripgrep
+          sudo apt-get install -y jq curl dpkg-dev rpm zstd libarchive-tools ripgrep gnupg
 
       - name: Test companion core
         run: python3 -m unittest discover -s tests -v
 
-      - name: Test Linux bundle patches
-        run: tests/test_linux_patches.sh
-
-      - name: Resolve source archive
+      - name: Resolve verified Linux source
         id: source
-        env:
-          DMG_URL_INPUT: ${{ inputs.dmg_url }}
-          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          set -euo pipefail
-          if [ -n "${DMG_URL_INPUT:-}" ]; then
-            version="${VERSION_INPUT:-}"
-            if [ -z "$version" ]; then
-              version="$(printf '%s\n' "$DMG_URL_INPUT" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
-            fi
-            test -n "$version"
-            ext="${DMG_URL_INPUT%%\?*}"
-            ext="${ext##*.}"
-            case "$ext" in dmg) ;; *) echo "release workflow requires a DMG source" >&2; exit 2 ;; esac
-            echo "source_url=$DMG_URL_INPUT" >> "$GITHUB_OUTPUT"
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "source_ext=$ext" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          appcast="$(jq -r '.appcastUrl' VERSION.json)"
-          dmg_url="$(jq -r '.dmgUrl' VERSION.json)"
-          curl -fsSL "$appcast" -o appcast.xml
-          VERSION="$(python3 <<'PY'
-          import sys
-          import xml.etree.ElementTree as ET
-          ns = {"sparkle": "http://www.andymatuschak.org/xml-namespaces/sparkle"}
-          root = ET.parse("appcast.xml").getroot()
-          for item in root.findall("./channel/item"):
-              version = item.findtext("sparkle:shortVersionString", namespaces=ns) or item.findtext("title") or ""
-              if version:
-                  print(version)
-                  sys.exit(0)
-          raise SystemExit("no version found in appcast")
-          PY
-          )"
-          echo "source_url=$dmg_url" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "source_ext=dmg" >> "$GITHUB_OUTPUT"
-
-      - name: Download source archive
-        env:
-          SOURCE_EXT: ${{ steps.source.outputs.source_ext }}
-          SOURCE_URL: ${{ steps.source.outputs.source_url }}
-        run: |
-          curl -fL "$SOURCE_URL" -o "Codex-source.$SOURCE_EXT"
+          scripts/resolve-linux-source \
+            --output ChatGPT-source.deb \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Check release freshness
         id: freshness
         env:
           GH_TOKEN: ${{ github.token }}
           FORCE_REBUILD: ${{ inputs.force_rebuild }}
-          SOURCE_EXT: ${{ steps.source.outputs.source_ext }}
           VERSION: ${{ steps.source.outputs.version }}
         run: |
           set -euo pipefail
-          source_sha="$(sha256sum "Codex-source.$SOURCE_EXT" | awk '{print $1}')"
+          source_sha="$(sha256sum ChatGPT-source.deb | awk '{print $1}')"
           build_recipe_sha="$(scripts/build-recipe-sha)"
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "build_recipe_sha=$build_recipe_sha" >> "$GITHUB_OUTPUT"
@@ -165,12 +105,11 @@ jobs:
       - name: Build packages
         if: steps.freshness.outputs.fresh != 'true'
         env:
-          SOURCE_EXT: ${{ steps.source.outputs.source_ext }}
           SOURCE_URL: ${{ steps.source.outputs.source_url }}
           VERSION: ${{ steps.source.outputs.version }}
         run: |
-          scripts/build-from-dmg \
-            --source "Codex-source.$SOURCE_EXT" \
+          scripts/build-from-linux \
+            --source ChatGPT-source.deb \
             --source-url "$SOURCE_URL" \
             --version "$VERSION"
 

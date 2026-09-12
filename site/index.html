@@ -46,7 +46,7 @@
           <p class="section-kicker">About</p>
           <h2 id="about-title">Built for repeatable Linux updates.</h2>
         </div>
-        <p>Codex UI changes fast. This project keeps Linux packaging deterministic: fetch current upstream source archive, rebuild native modules, apply Linux patches, emit packages, verify checksums, and keep local runtime data out of git.</p>
+        <p>Codex UI changes fast. This project keeps Linux packaging deterministic: verify the signed official Linux repository, preserve its native runtime, emit packages, verify checksums, and keep local runtime data out of git.</p>
       </section>
 
       <section class="about" aria-labelledby="rationale-title">
@@ -64,7 +64,7 @@
           <div role="listitem">
             <span>01</span>
             <strong>Resolve</strong>
-            <p>Read upstream appcast and select current source archive and version.</p>
+            <p>Verify the signed official Linux repository and select the current package.</p>
           </div>
           <div role="listitem">
             <span>02</span>
@@ -93,7 +93,7 @@
           <li><span>Arch / CachyOS</span><code>.pkg.tar.zst</code></li>
           <li><span>Debian / Ubuntu (experimental)</span><code>.deb</code></li>
           <li><span>Fedora / RHEL-like (experimental)</span><code>.rpm</code></li>
-          <li><span>Latest official macOS source</span><code>Codex-$VERSION.dmg</code></li>
+          <li><span>Verified official Linux source</span><code>chatgpt_$VERSION_amd64.deb</code></li>
         </ul>
       </section>
 
