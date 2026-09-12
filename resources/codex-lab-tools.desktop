@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=Codex UI Tools
-Name[es]=Herramientas de Codex UI
-Comment=Local usage, capture and crash tools for Codex UI
-Comment[es]=Uso local, capturas e informes de fallos para Codex UI
-Exec=codex-ui-tools panel
-Icon=codex-ui-linux
+Name=Codex Lab Tools
+Name[es]=Herramientas de Codex Lab
+Comment=Local usage, capture and crash tools for Codex I+D Lab
+Comment[es]=Uso local, capturas e informes de fallos para Codex I+D Lab
+Exec=codex-lab-tools panel
+Icon=codex-lab
 Terminal=false
 Categories=Development;
 StartupNotify=true
@@ -14,17 +14,17 @@ Actions=OCR;QR;Crashes;
 [Desktop Action OCR]
 Name=Capture text (OCR)
 Name[es]=Capturar texto (OCR)
-Exec=codex-ui-tools ocr
+Exec=codex-lab-tools ocr
 Icon=edit-select-text
 
 [Desktop Action QR]
 Name=Capture QR privately
 Name[es]=Capturar QR de forma privada
-Exec=codex-ui-tools qr
+Exec=codex-lab-tools qr
 Icon=view-barcode-qr
 
 [Desktop Action Crashes]
 Name=Crash reports
 Name[es]=Informes de fallos
-Exec=codex-ui-tools crashes
+Exec=codex-lab-tools crashes
 Icon=tools-report-bug

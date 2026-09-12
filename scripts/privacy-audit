@@ -16,7 +16,7 @@ blocked_regex=(
   'gh[opsu]_[A-Za-z0-9_]{20,}'
   'sk-[A-Za-z0-9_-]{20,}'
   '-----BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----'
-  'codex-ui-linux-port-current'
+  'codex-id-lab-unofficial-current'
   'Descargas/Codex\.dmg'
 )
 
@@ -30,7 +30,8 @@ allow_files=(
 )
 
 tmp="$(mktemp)"
-trap 'rm -f "$tmp"' EXIT
+hit="$(mktemp)"
+trap 'rm -f "$tmp" "$hit"' EXIT
 
 git ls-files --others --cached --exclude-standard > "$tmp"
 
@@ -41,21 +42,19 @@ while IFS= read -r file; do
     .git/*|build/*|dist/*|tmp/*|work/*|out/*) continue ;;
   esac
   for pattern in "${blocked_regex[@]}"; do
-    if rg -n --pcre2 "$pattern" "$file" >/tmp/codexui-privacy-hit 2>/dev/null; then
+    if rg -n --pcre2 "$pattern" "$file" >"$hit" 2>/dev/null; then
       allowed=0
       for allow in "${allow_files[@]}"; do
         [[ "$file" == "$allow" ]] && allowed=1
       done
       if [[ "$allowed" -eq 0 ]]; then
         echo "privacy-audit: blocked pattern in $file" >&2
-        cat /tmp/codexui-privacy-hit >&2
+        cat "$hit" >&2
         failed=1
       fi
     fi
   done
 done < "$tmp"
-
-rm -f /tmp/codexui-privacy-hit
 
 if [[ "$failed" -ne 0 ]]; then
   exit 1

@@ -2,8 +2,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="$(jq -r '.codexUiVersion' "$ROOT/VERSION.json")"
+VERSION="${1:-}"
 PKGBUILD="$ROOT/packaging/aur/PKGBUILD"
+
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Usage: scripts/update-aur-metadata VERSION" >&2
+  exit 2
+fi
 
 sed -i "s/^pkgver=.*/pkgver=${VERSION}/" "$PKGBUILD"
 sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD"
@@ -14,4 +19,3 @@ popd >/dev/null
 
 "$ROOT/scripts/privacy-audit"
 echo "update-aur-metadata: refreshed $VERSION"
-

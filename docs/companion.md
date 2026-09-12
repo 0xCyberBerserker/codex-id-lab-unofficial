@@ -2,7 +2,7 @@
 
 ## English
 
-`codex-ui-tools` is the native Qt companion shipped by this port. It follows the active `QPalette` and provides:
+`codex-lab-tools` is the native Qt companion shipped by this port. It follows the active `QPalette` and provides:
 
 - local Codex usage and rate-limit status through the bundled Codex CLI
 - region OCR with Tesseract and Spectacle
@@ -14,32 +14,32 @@ It does not scan session archives, retain account responses, read core bytes, or
 Install from a checkout without replacing or restarting Codex UI:
 
 ```bash
-scripts/install-user-companion --enable --desktop-shortcut
+scripts/install-codex-lab-companion --enable --desktop-shortcut
 ```
 
 Packaged installations can enable it with:
 
 ```bash
-systemctl --user enable --now codex-ui-companion.service
+systemctl --user enable --now codex-lab-companion.service
 ```
 
 Commands:
 
 ```bash
-codex-ui-tools panel
-codex-ui-tools usage-json
-codex-ui-tools ocr
-codex-ui-tools qr
-codex-ui-tools crashes
+codex-lab-tools panel
+codex-lab-tools usage-json
+codex-lab-tools ocr
+codex-lab-tools qr
+codex-lab-tools crashes
 ```
 
-OCR requires Spectacle, Tesseract, English and Spanish language data. QR capture requires `zbarimg`. Crash reports are created with mode `0600` under `~/.local/state/codex-ui-linux-port/crashes`.
+OCR requires Spectacle, Tesseract, English and Spanish language data. QR capture requires `zbarimg`. Crash reports are created with mode `0600` under `~/.local/state/codex-id-lab-unofficial/crashes`.
 
 ---
 
 ## Español
 
-`codex-ui-tools` es el companion Qt nativo incluido por este port. Respeta la `QPalette` activa y ofrece:
+`codex-lab-tools` es el companion Qt nativo incluido por este port. Respeta la `QPalette` activa y ofrece:
 
 - estado local de consumo y límites de Codex mediante el CLI incluido
 - OCR de región con Tesseract y Spectacle
@@ -51,23 +51,23 @@ No escanea archivos de sesiones, no conserva respuestas de cuenta, no lee los by
 Puede instalarse desde el checkout sin reemplazar ni reiniciar Codex UI:
 
 ```bash
-scripts/install-user-companion --enable --desktop-shortcut
+scripts/install-codex-lab-companion --enable --desktop-shortcut
 ```
 
 En una instalación empaquetada se habilita con:
 
 ```bash
-systemctl --user enable --now codex-ui-companion.service
+systemctl --user enable --now codex-lab-companion.service
 ```
 
 Comandos:
 
 ```bash
-codex-ui-tools panel
-codex-ui-tools usage-json
-codex-ui-tools ocr
-codex-ui-tools qr
-codex-ui-tools crashes
+codex-lab-tools panel
+codex-lab-tools usage-json
+codex-lab-tools ocr
+codex-lab-tools qr
+codex-lab-tools crashes
 ```
 
-El OCR necesita Spectacle, Tesseract y los datos de idioma inglés y español. La captura QR necesita `zbarimg`. Los informes se crean con modo `0600` bajo `~/.local/state/codex-ui-linux-port/crashes`.
+El OCR necesita Spectacle, Tesseract y los datos de idioma inglés y español. La captura QR necesita `zbarimg`. Los informes se crean con modo `0600` bajo `~/.local/state/codex-id-lab-unofficial/crashes`.

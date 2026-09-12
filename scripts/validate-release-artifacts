@@ -3,7 +3,7 @@ set -euo pipefail
 
 DIST="${1:-dist}"
 VERSION="${2:?version required}"
-NAME="codex-ui-linux-port"
+NAME="codex-id-lab-unofficial"
 
 fail() {
   echo "validate-release-artifacts: $*" >&2

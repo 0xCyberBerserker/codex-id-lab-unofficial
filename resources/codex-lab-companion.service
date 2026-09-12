@@ -1,11 +1,11 @@
 [Unit]
-Description=Codex UI local companion
+Description=Codex I+D Lab local companion
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/codex-ui-tools tray
+ExecStart=/usr/bin/codex-lab-tools tray
 Restart=on-failure
 RestartSec=3
 UMask=0077

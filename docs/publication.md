@@ -37,9 +37,9 @@ GitHub Actions is the only authoritative release builder. It always downloads th
 Release assets must include:
 
 - `chatgpt_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-ui-linux-port_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
+- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 
@@ -67,9 +67,9 @@ Este repositorio contiene automatización pública y no oficial para empaquetar 
 ## Assets requeridos
 
 - `chatgpt_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-ui-linux-port_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
+- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 

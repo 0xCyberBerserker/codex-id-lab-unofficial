@@ -1,4 +1,4 @@
-name: Build Codex UI Linux packages
+name: Build Codex I+D Lab Linux packages
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: codex-ui-release-${{ github.ref }}
+  group: codex-lab-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -133,7 +133,7 @@ jobs:
           mapfile -t assets < <(find dist -maxdepth 1 -type f | sort)
           gh release create "v$VERSION" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Codex UI Linux Port $VERSION" \
+            --title "Codex I+D Lab - Unofficial $VERSION" \
             --notes "Unofficial automated Linux package build for Codex UI $VERSION."
 
       - name: Refresh release
@@ -162,5 +162,5 @@ jobs:
             --clobber
           gh release edit "v$VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Codex UI Linux Port $VERSION" \
+            --title "Codex I+D Lab - Unofficial $VERSION" \
             --notes "Unofficial automated Linux package build for Codex UI $VERSION. Source archive SHA256: ${{ steps.freshness.outputs.source_sha }}"

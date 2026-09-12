@@ -5,7 +5,7 @@ The repository includes future AUR metadata under `packaging/aur`.
 Package name:
 
 ```text
-codex-ui-linux-port-bin
+codex-id-lab-unofficial-bin
 ```
 
 The AUR package is not published yet.
@@ -33,7 +33,7 @@ makepkg -sf
 
 # Preparación para AUR
 
-El repositorio incluye metadata futura en `packaging/aur` para `codex-ui-linux-port-bin`. El paquete todavía no está publicado.
+El repositorio incluye metadata futura en `packaging/aur` para `codex-id-lab-unofficial-bin`. El paquete todavía no está publicado.
 
 Antes de publicarlo:
 

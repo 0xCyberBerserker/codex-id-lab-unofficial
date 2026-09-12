@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native KDE companion for Codex UI Linux Port."""
+"""Native KDE companion for Codex I+D Lab - Unofficial."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Any
 
 
-APP_NAME = "Codex UI Tools"
+APP_NAME = "Codex Lab Tools"
 APP_VERSION = "1.0.0"
 COREDUMP_MESSAGE_ID = "fc2e22bc6ee647b6b90729ab34a250b1"
 CRASH_FIELDS = (
@@ -162,7 +162,7 @@ TEXT = {
 
 
 def language() -> str:
-    configured = os.environ.get("CODEXUI_LANG", "")
+    configured = os.environ.get("CODEX_LAB_LANG", os.environ.get("CODEXUI_LANG", ""))
     current = configured or locale.getlocale()[0] or os.environ.get("LANG", "en")
     return "es" if current.lower().startswith("es") else "en"
 
@@ -172,11 +172,11 @@ def tr(key: str, **values: Any) -> str:
 
 
 def codex_command() -> list[str]:
-    configured = os.environ.get("CODEXUI_CODEX_COMMAND")
+    configured = os.environ.get("CODEX_LAB_CODEX_COMMAND", os.environ.get("CODEXUI_CODEX_COMMAND"))
     if configured:
         command = shlex.split(configured)
     else:
-        packaged = Path("/opt/codex-ui-linux-port/bin/codex-cli-wrapper")
+        packaged = Path("/opt/codex-id-lab-unofficial/bin/codex-cli-wrapper")
         command = [str(packaged)] if packaged.is_file() else [shutil.which("codex") or ""]
     if not command or not command[0]:
         raise RuntimeError(tr("missing_command", command="codex"))
@@ -208,7 +208,7 @@ def query_codex_account(
             "id": 1,
             "method": "initialize",
             "params": {
-                "clientInfo": {"name": "codex-ui-linux-port", "version": APP_VERSION},
+                "clientInfo": {"name": "codex-id-lab-unofficial", "version": APP_VERSION},
                 "capabilities": {"experimentalApi": True},
             },
         },
@@ -363,12 +363,12 @@ def crash_report(event: dict[str, Any], detected_at: datetime | None = None) -> 
 
 def crash_directory() -> Path:
     state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
-    return state_home / "codex-ui-linux-port" / "crashes"
+    return state_home / "codex-id-lab-unofficial" / "crashes"
 
 
 def local_tessdata_directory() -> Path | None:
     data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
-    directory = data_home / "codex-ui-linux-port" / "tessdata"
+    directory = data_home / "codex-id-lab-unofficial" / "tessdata"
     return directory if any(directory.glob("*.traineddata")) else None
 
 
@@ -378,7 +378,7 @@ def companion_socket_path() -> str:
     runtime = configured if configured.is_absolute() else fallback
     if not runtime.is_dir():
         runtime = Path.home() / ".cache"
-    directory = runtime / "codex-ui-linux-port"
+    directory = runtime / "codex-id-lab-unofficial"
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(directory, 0o700)
     return str(directory / "companion.sock")
@@ -446,10 +446,10 @@ def run_gui(command: str) -> int:
     app.setQuitOnLastWindowClosed(False)
 
     def app_icon() -> QIcon:
-        icon = QIcon.fromTheme("codex-ui-linux")
+        icon = QIcon.fromTheme("codex-lab")
         if not icon.isNull():
             return icon
-        packaged = Path("/usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg")
+        packaged = Path("/usr/share/icons/hicolor/scalable/apps/codex-lab.svg")
         return QIcon(str(packaged)) if packaged.is_file() else app.style().standardIcon(QStyle.SP_ComputerIcon)
 
     def send_existing(action: str) -> bool:
@@ -581,8 +581,8 @@ def run_gui(command: str) -> int:
             self.brand.setStyleSheet("font-size: 10px;")
             footer.addWidget(self.brand)
             footer.addStretch()
-            open_button = QPushButton(QIcon.fromTheme("codex-ui-linux"), tr("open_codex"))
-            open_button.clicked.connect(lambda: QProcess.startDetached("codex-ui-linux", []))
+            open_button = QPushButton(QIcon.fromTheme("codex-lab"), tr("open_codex"))
+            open_button.clicked.connect(lambda: QProcess.startDetached("codex-lab", []))
             footer.addWidget(open_button)
             close_button = QPushButton(tr("close"))
             close_button.clicked.connect(self.hide)
@@ -761,7 +761,7 @@ def run_gui(command: str) -> int:
             for command_name in ("spectacle", "zbarimg" if mode == "qr" else "tesseract"):
                 if not shutil.which(command_name):
                     raise RuntimeError(tr("missing_command", command=command_name))
-            with tempfile.TemporaryDirectory(prefix="codex-ui-capture-") as directory:
+            with tempfile.TemporaryDirectory(prefix="codex-lab-capture-") as directory:
                 image = Path(directory) / "capture.png"
                 capture = subprocess.run(
                     ["spectacle", "--region", "--background", "--nonotify", "--output", str(image)],
@@ -796,7 +796,8 @@ def run_gui(command: str) -> int:
                     check=False,
                 ).stdout.splitlines()[1:]
                 available = {item.strip() for item in languages if item.strip()}
-                requested = [item for item in os.environ.get("CODEXUI_OCR_LANGUAGES", "spa+eng").split("+") if item]
+                languages = os.environ.get("CODEX_LAB_OCR_LANGUAGES", os.environ.get("CODEXUI_OCR_LANGUAGES", "spa+eng"))
+                requested = [item for item in languages.split("+") if item]
                 selected = [item for item in requested if item in available]
                 if not selected:
                     raise RuntimeError(tr("missing_ocr_language"))
@@ -856,7 +857,7 @@ def run_gui(command: str) -> int:
         print(f"{APP_NAME}: {error}", file=sys.stderr)
         return 1
     QTimer.singleShot(0, lambda: controller.dispatch(command) if command != "tray" else None)
-    test_quit_ms = int(os.environ.get("CODEXUI_TEST_QUIT_MS", "0"))
+    test_quit_ms = int(os.environ.get("CODEX_LAB_TEST_QUIT_MS", os.environ.get("CODEXUI_TEST_QUIT_MS", "0")))
     if test_quit_ms > 0:
         QTimer.singleShot(test_quit_ms, app.quit)
     return app.exec()

@@ -7,7 +7,7 @@ DESKTOP_SHORTCUT=0
 
 usage() {
   cat <<'EOF'
-Usage: install-user-companion [--enable] [--desktop-shortcut]
+Usage: install-codex-lab-companion [--enable] [--desktop-shortcut]
 
 Options:
   --enable            Enable and start the companion user service.
@@ -21,34 +21,34 @@ while [[ $# -gt 0 ]]; do
     --enable) ENABLE=1 ;;
     --desktop-shortcut) DESKTOP_SHORTCUT=1 ;;
     --help|-h) usage; exit 0 ;;
-    *) echo "install-user-companion: unknown option: $1" >&2; usage >&2; exit 2 ;;
+    *) echo "install-codex-lab-companion: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
 done
 
-command -v python3 >/dev/null 2>&1 || { echo "install-user-companion: python3 is required" >&2; exit 2; }
-python3 -c 'import PySide6' >/dev/null 2>&1 || { echo "install-user-companion: PySide6 is required" >&2; exit 2; }
+command -v python3 >/dev/null 2>&1 || { echo "install-codex-lab-companion: python3 is required" >&2; exit 2; }
+python3 -c 'import PySide6' >/dev/null 2>&1 || { echo "install-codex-lab-companion: PySide6 is required" >&2; exit 2; }
 
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 bin_dir="$HOME/.local/bin"
-app_dir="$data_home/codex-ui-linux-port"
+app_dir="$data_home/codex-id-lab-unofficial"
 applications_dir="$data_home/applications"
 icons_dir="$data_home/icons/hicolor/scalable/apps"
 unit_dir="$config_home/systemd/user"
 
 install -d -m 755 "$bin_dir" "$app_dir" "$applications_dir" "$icons_dir" "$unit_dir"
-install -m 755 "$ROOT/scripts/codex-ui-companion.py" "$app_dir/codex-ui-companion.py"
-install -m 644 "$ROOT/resources/codex-ui-tools.desktop" "$applications_dir/codex-ui-tools.desktop"
-install -m 644 "$ROOT/docs/assets/codex-ui-linux-port.svg" "$icons_dir/codex-ui-linux.svg"
+install -m 755 "$ROOT/scripts/codex-lab-companion.py" "$app_dir/codex-lab-companion.py"
+install -m 644 "$ROOT/resources/codex-lab-tools.desktop" "$applications_dir/codex-lab-tools.desktop"
+install -m 644 "$ROOT/docs/assets/codex-lab.svg" "$icons_dir/codex-lab.svg"
 
-launcher="$bin_dir/codex-ui-tools"
-printf '#!/usr/bin/env bash\nexec /usr/bin/python3 %q "$@"\n' "$app_dir/codex-ui-companion.py" > "$launcher"
+launcher="$bin_dir/codex-lab-tools"
+printf '#!/usr/bin/env bash\nexec /usr/bin/python3 %q "$@"\n' "$app_dir/codex-lab-companion.py" > "$launcher"
 chmod 755 "$launcher"
 
 sed "s|^ExecStart=.*|ExecStart=$launcher tray|" \
-  "$ROOT/resources/codex-ui-companion.service" > "$unit_dir/codex-ui-companion.service"
-chmod 644 "$unit_dir/codex-ui-companion.service"
+  "$ROOT/resources/codex-lab-companion.service" > "$unit_dir/codex-lab-companion.service"
+chmod 644 "$unit_dir/codex-lab-companion.service"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$applications_dir" >/dev/null 2>&1 || true
@@ -64,12 +64,12 @@ if [[ "$DESKTOP_SHORTCUT" -eq 1 ]]; then
     desktop_dir="$HOME/Desktop"
   fi
   install -d -m 755 "$desktop_dir"
-  install -m 755 "$ROOT/resources/codex-ui-tools.desktop" "$desktop_dir/Codex UI Tools.desktop"
+  install -m 755 "$ROOT/resources/codex-lab-tools.desktop" "$desktop_dir/Codex Lab Tools.desktop"
 fi
 
 if [[ "$ENABLE" -eq 1 ]]; then
   systemctl --user daemon-reload
-  systemctl --user enable --now codex-ui-companion.service
+  systemctl --user enable --now codex-lab-companion.service
 fi
 
-echo "install-user-companion: installed $launcher"
+echo "install-codex-lab-companion: installed $launcher"

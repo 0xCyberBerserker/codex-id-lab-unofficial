@@ -2,7 +2,7 @@
 
 ## English
 
-Codex UI Linux Port is packaging automation around the official ChatGPT Linux runtime. It preserves the upstream application bundle and adds only package-manager, launcher, updater, and companion integration.
+Codex I+D Lab - Unofficial is packaging automation around the official ChatGPT Linux runtime. It preserves the upstream application bundle and adds only package-manager, launcher, updater, and companion integration.
 
 ```mermaid
 flowchart LR
@@ -10,7 +10,7 @@ flowchart LR
     verify --> source["Official Linux runtime"]
     source --> packages["Arch, Debian, RPM packages"]
     packages --> release["GitHub release assets"]
-    release --> updater["codex-ui-update"]
+    release --> updater["codex-lab-install"]
     packages --> companion["Native Qt companion"]
     companion --> cli["Local Codex CLI app-server"]
     companion --> desktop["KDE capture and user journal"]
@@ -22,7 +22,7 @@ Signed Linux repository
   -> Official Linux runtime
   -> Arch, Debian, and RPM packages
   -> GitHub release assets
-  -> codex-ui-update
+  -> codex-lab-install
 ```
 
 ## Components
@@ -33,8 +33,8 @@ Signed Linux repository
 - `scripts/install-linux-integration`: installs the launcher, updater hooks, desktop entry, and companion files.
 - `scripts/build-packages`: creates Arch, Debian, and RPM package outputs from a prepared package root.
 - `scripts/validate-release-artifacts`: validates the expected release asset set and checksums.
-- `scripts/codex-ui-update`: detects the host package manager, downloads the matching package, verifies checksums, installs, and can smoke-test.
-- `scripts/codex-ui-companion.py`: provides a separate native Qt process for local usage, capture, and filtered crash metadata.
+- `scripts/codex-lab-install`: detects the host package manager, downloads the matching package, verifies checksums, installs, and can smoke-test.
+- `scripts/codex-lab-companion.py`: provides a separate native Qt process for local usage, capture, and filtered crash metadata.
 - `packaging/`: package metadata templates.
 - `docs/`: usage, packaging, security, publication, and AUR notes.
 
@@ -53,7 +53,7 @@ Signed Linux repository
 
 ## Español
 
-Codex UI Linux Port automatiza el empaquetado del runtime Linux oficial de ChatGPT. Conserva el bundle upstream y añade únicamente integración con gestores de paquetes, launcher, updater y companion.
+Codex I+D Lab - Unofficial automatiza el empaquetado del runtime Linux oficial de ChatGPT. Conserva el bundle upstream y añade únicamente integración con gestores de paquetes, launcher, updater y companion.
 
 ## Componentes
 
@@ -63,8 +63,8 @@ Codex UI Linux Port automatiza el empaquetado del runtime Linux oficial de ChatG
 - `scripts/install-linux-integration`: instala el launcher, los hooks del updater, la entrada de escritorio y los archivos del companion.
 - `scripts/build-packages`: crea salidas Arch, Debian y RPM desde un package root preparado.
 - `scripts/validate-release-artifacts`: valida el conjunto esperado de assets de release y checksums.
-- `scripts/codex-ui-update`: detecta el gestor de paquetes del host, descarga el paquete compatible, verifica checksums, instala y puede ejecutar smoke test.
-- `scripts/codex-ui-companion.py`: aporta un proceso Qt nativo separado para consumo local, capturas y metadatos filtrados de fallos.
+- `scripts/codex-lab-install`: detecta el gestor de paquetes del host, descarga el paquete compatible, verifica checksums, instala y puede ejecutar smoke test.
+- `scripts/codex-lab-companion.py`: aporta un proceso Qt nativo separado para consumo local, capturas y metadatos filtrados de fallos.
 - `packaging/`: plantillas de metadata de paquetes.
 - `docs/`: notas de uso, empaquetado, seguridad, publicación y AUR.
 

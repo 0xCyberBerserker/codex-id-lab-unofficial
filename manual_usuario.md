@@ -2,27 +2,35 @@
 
 ## English
 
-Codex UI Linux Port provides an unofficial Linux packaging and update path for Codex UI.
+Codex I+D Lab - Unofficial provides an unofficial Linux packaging and update path for Codex UI.
 
 ## Install Or Update
 
+Fresh install, update, or migration from the former project name:
+
 ```bash
-codex-ui-update
+bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
+```
+
+After installation:
+
+```bash
+codex-lab-install
 ```
 
 ## Check Latest Available Version
 
 ```bash
-codex-ui-update --check
+codex-lab-install --check
 ```
 
 ## Smoke Test
 
 ```bash
-codex-ui-update --smoke
+codex-lab-install --smoke
 ```
 
-The legacy `codexui-update` command remains available as a compatibility alias with the same flags.
+`codex-lab-update` is the short alias with the same flags. Former `codex-ui-*` commands remain temporarily available only for migration.
 
 The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 
@@ -30,10 +38,10 @@ Voice and composer dictation are provided by the official Linux runtime and use 
 
 ## Local Companion
 
-The package includes `codex-ui-tools`. It shows local Codex usage, captures text and QR codes, and records safe crash metadata. Enable its tray service with:
+The package includes `codex-lab-tools`. It shows local Codex usage, captures text and QR codes, and records safe crash metadata. Enable its tray service with:
 
 ```bash
-systemctl --user enable --now codex-ui-companion.service
+systemctl --user enable --now codex-lab-companion.service
 ```
 
 The companion is a separate process and does not restart Codex UI. Detailed commands and privacy limits are documented in `docs/companion.md`.
@@ -58,27 +66,35 @@ See `docs/usage.md` for detailed usage.
 
 ## Español
 
-Codex UI Linux Port proporciona una vía no oficial para empaquetar y actualizar Codex UI en Linux.
+Codex I+D Lab - Unofficial proporciona una vía no oficial para empaquetar y actualizar Codex UI en Linux.
 
 ## Instalar o actualizar
 
+Instalación desde cero, actualización o migración desde el nombre anterior:
+
 ```bash
-codex-ui-update
+bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
+```
+
+Después de instalar:
+
+```bash
+codex-lab-install
 ```
 
 ## Comprobar última versión disponible
 
 ```bash
-codex-ui-update --check
+codex-lab-install --check
 ```
 
 ## Smoke test
 
 ```bash
-codex-ui-update --smoke
+codex-lab-install --smoke
 ```
 
-El comando anterior `codexui-update` permanece disponible como alias compatible con los mismos flags.
+`codex-lab-update` es el alias corto con los mismos flags. Los comandos anteriores `codex-ui-*` se mantienen temporalmente sólo para la migración.
 
 El smoke test lanza Codex UI con un perfil temporal y comprueba que el runtime nativo permanece activo.
 
@@ -86,10 +102,10 @@ La voz y el dictado del compositor los proporciona el runtime Linux oficial y us
 
 ## Companion local
 
-El paquete incluye `codex-ui-tools`. Muestra el consumo local de Codex, captura texto y códigos QR y registra metadatos seguros de fallos. Su servicio de bandeja se habilita con:
+El paquete incluye `codex-lab-tools`. Muestra el consumo local de Codex, captura texto y códigos QR y registra metadatos seguros de fallos. Su servicio de bandeja se habilita con:
 
 ```bash
-systemctl --user enable --now codex-ui-companion.service
+systemctl --user enable --now codex-lab-companion.service
 ```
 
 El companion es un proceso independiente y no reinicia Codex UI. Los comandos y límites de privacidad se documentan en `docs/companion.md`.

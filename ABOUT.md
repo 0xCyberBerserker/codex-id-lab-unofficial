@@ -1,6 +1,6 @@
-# About Codex UI Linux Port
+# About Codex I+D Lab - Unofficial
 
-Codex UI Linux Port is an unofficial packaging automation project for Linux systems.
+Codex I+D Lab - Unofficial is an unofficial packaging automation project for Linux systems.
 
 The project exists to make frequent Codex UI updates repeatable on Linux without committing upstream binaries or runtime data to git. It uses GitHub Actions as the release authority, validates generated packages, and keeps redistribution boundaries explicit.
 
@@ -19,7 +19,7 @@ The project provides:
 - Linux launcher and desktop integration
 - Arch/CachyOS package output plus experimental Debian and RPM outputs
 - checksum and manifest validation
-- a host-aware updater command: `codex-ui-update`
+- a host-aware updater command: `codex-lab-install`
 - future AUR metadata
 
 ## Non-Goals
@@ -42,9 +42,9 @@ Repository-authored automation, patches, packaging metadata, website material, a
 
 ---
 
-# Acerca de Codex UI Linux Port
+# Acerca de Codex I+D Lab - Unofficial
 
-Codex UI Linux Port es un proyecto no oficial de automatización de paquetes para Linux. Hace repetibles las actualizaciones frecuentes sin guardar en git binarios upstream ni datos de ejecución.
+Codex I+D Lab - Unofficial es un proyecto no oficial de automatización de paquetes para Linux. Hace repetibles las actualizaciones frecuentes sin guardar en git binarios upstream ni datos de ejecución.
 
 ## Alcance
 
@@ -53,7 +53,7 @@ Codex UI Linux Port es un proyecto no oficial de automatización de paquetes par
 - integración del launcher y el escritorio
 - paquetes Arch/CachyOS y objetivos experimentales DEB y RPM
 - validación del manifiesto y los checksums
-- actualizador `codex-ui-update`
+- actualizador `codex-lab-install`
 
 ## Fuera de alcance
 

@@ -1,9 +1,11 @@
-Name: codex-ui-linux-port
+Name: codex-id-lab-unofficial
 Version: @VERSION@
 Release: 1
-Summary: Unofficial Codex UI Linux port
+Summary: Codex I+D Lab - Unofficial
 License: Custom
 BuildArch: x86_64
+Provides: codex-ui-linux-port
+Obsoletes: codex-ui-linux-port
 Requires: nodejs
 Requires: curl
 Requires: jq
@@ -39,7 +41,7 @@ Requires: tesseract-langpack-spa
 Requires: zbar
 
 %description
-Unofficial packaging automation for Codex UI.
+Unofficial packaging automation for the official ChatGPT Linux runtime.
 
 %prep
 
@@ -47,16 +49,20 @@ Unofficial packaging automation for Codex UI.
 
 %install
 mkdir -p %{buildroot}
-tar -xzf %{_sourcedir}/codex-ui-linux-port-%{version}-payload.tar.gz -C %{buildroot}
+tar -xf %{_sourcedir}/codex-id-lab-unofficial-%{version}-payload.tar -C %{buildroot}
 
 %files
-/opt/codex-ui-linux-port
+/opt/codex-id-lab-unofficial
+/usr/bin/codex-lab
+/usr/bin/codex-lab-install
+/usr/bin/codex-lab-update
+/usr/bin/codex-lab-tools
 /usr/bin/codex-ui-linux
 /usr/bin/codex-ui-update
 /usr/bin/codexui-update
 /usr/bin/codex-ui-tools
-/usr/lib/systemd/user/codex-ui-companion.service
-/usr/share/applications/codex-ui-linux.desktop
-/usr/share/applications/codex-ui-tools.desktop
-/usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg
-/usr/share/licenses/codex-ui-linux-port
+/usr/lib/systemd/user/codex-lab-companion.service
+/usr/share/applications/codex-lab.desktop
+/usr/share/applications/codex-lab-tools.desktop
+/usr/share/icons/hicolor/scalable/apps/codex-lab.svg
+/usr/share/licenses/codex-id-lab-unofficial

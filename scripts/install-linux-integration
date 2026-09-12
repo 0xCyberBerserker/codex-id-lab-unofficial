@@ -11,15 +11,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/share/icons/hicolor/scalable/apps" "$INSTALL_ROOT/share/systemd/user"
 install -m 644 "$SCRIPT_DIR/discord-rich-presence.js" "$INSTALL_ROOT/share/discord-rich-presence.js"
-install -m 755 "$SCRIPT_DIR/codex-ui-companion.py" "$INSTALL_ROOT/share/codex-ui-companion.py"
-install -m 644 "$SCRIPT_DIR/../resources/codex-ui-tools.desktop" "$INSTALL_ROOT/share/codex-ui-tools.desktop"
-install -m 644 "$SCRIPT_DIR/../resources/codex-ui-companion.service" "$INSTALL_ROOT/share/systemd/user/codex-ui-companion.service"
+install -m 755 "$SCRIPT_DIR/codex-lab-companion.py" "$INSTALL_ROOT/share/codex-lab-companion.py"
+install -m 644 "$SCRIPT_DIR/../resources/codex-lab-tools.desktop" "$INSTALL_ROOT/share/codex-lab-tools.desktop"
+install -m 644 "$SCRIPT_DIR/../resources/codex-lab-companion.service" "$INSTALL_ROOT/share/systemd/user/codex-lab-companion.service"
 
 cat > "$INSTALL_ROOT/bin/codex-cli-wrapper" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-bundled="/opt/codex-ui-linux-port/resources/codex"
+bundled="/opt/codex-id-lab-unofficial/resources/codex"
 if [[ -x "$bundled" ]]; then
   exec "$bundled" "$@"
 fi
@@ -30,11 +30,11 @@ echo "codex-cli-wrapper: Codex CLI is not available" >&2
 exit 127
 EOF
 
-cat > "$INSTALL_ROOT/bin/codex-ui-linux" <<EOF
+cat > "$INSTALL_ROOT/bin/codex-lab" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_ROOT="/opt/codex-ui-linux-port"
+APP_ROOT="/opt/codex-id-lab-unofficial"
 RUNTIME="\$APP_ROOT/ChatGPT"
 
 # Do not leak a parent Codex CLI session into the desktop runtime.
@@ -42,32 +42,38 @@ unset CODEX_CI CODEX_SESSION_ID CODEX_THREAD_ID CODEX_MANAGED_BY_NPM
 unset CODEX_MANAGED_PACKAGE_ROOT CODEX_SHELL CODEX_INTERNAL_ORIGINATOR_OVERRIDE
 
 if [[ "\${1:-}" == "--version" ]]; then
-  echo "codex-ui-linux $VERSION"
+  echo "codex-lab $VERSION"
   exit 0
 fi
 
 runtime_args=()
-locale_value="\${CODEXUI_LANG:-\${LC_ALL:-\${LC_MESSAGES:-\${LANG:-}}}}"
+locale_value="\${CODEX_LAB_LANG:-\${CODEXUI_LANG:-\${LC_ALL:-\${LC_MESSAGES:-\${LANG:-}}}}}"
 locale_value="\${locale_value%%.*}"
 locale_value="\${locale_value%%@*}"
 locale_value="\${locale_value//_/-}"
 if [[ -n "\$locale_value" && "\$locale_value" != "C" && "\$locale_value" != "POSIX" ]]; then
   runtime_args+=(--lang="\$locale_value")
 fi
-if [[ -n "\${CODEXUI_OZONE_PLATFORM:-}" ]]; then
-  runtime_args+=(--ozone-platform="\$CODEXUI_OZONE_PLATFORM")
-  if [[ "\$CODEXUI_OZONE_PLATFORM" == "wayland" ]]; then
+ozone_platform="\${CODEX_LAB_OZONE_PLATFORM:-\${CODEXUI_OZONE_PLATFORM:-}}"
+if [[ -n "\$ozone_platform" ]]; then
+  runtime_args+=(--ozone-platform="\$ozone_platform")
+  if [[ "\$ozone_platform" == "wayland" ]]; then
     runtime_args+=(--enable-features=GlobalShortcutsPortal)
   fi
 fi
-if [[ -n "\${CODEXUI_ELECTRON_FLAGS:-}" ]]; then
-  read -r -a configured_flags <<< "\$CODEXUI_ELECTRON_FLAGS"
+electron_flags="\${CODEX_LAB_ELECTRON_FLAGS:-\${CODEXUI_ELECTRON_FLAGS:-}}"
+if [[ -n "\$electron_flags" ]]; then
+  read -r -a configured_flags <<< "\$electron_flags"
   runtime_args+=("\${configured_flags[@]}")
 fi
 
-discord_config="\${XDG_CONFIG_HOME:-\$HOME/.config}/codex-ui-linux-port/discord-rich-presence.json"
+config_home="\${XDG_CONFIG_HOME:-\$HOME/.config}"
+discord_config="\$config_home/codex-id-lab-unofficial/discord-rich-presence.json"
+if [[ ! -f "\$discord_config" && -f "\$config_home/codex-ui-linux-port/discord-rich-presence.json" ]]; then
+  discord_config="\$config_home/codex-ui-linux-port/discord-rich-presence.json"
+fi
 if [[ -f "\$discord_config" ]]; then
-  if [[ "\${CODEXUI_DISCORD_RPC_DEBUG:-0}" == "1" ]]; then
+  if [[ "\${CODEX_LAB_DISCORD_RPC_DEBUG:-\${CODEXUI_DISCORD_RPC_DEBUG:-0}}" == "1" ]]; then
     /usr/bin/node "\$APP_ROOT/share/discord-rich-presence.js" "\$discord_config" &
   else
     /usr/bin/node "\$APP_ROOT/share/discord-rich-presence.js" "\$discord_config" >/dev/null 2>&1 &
@@ -77,27 +83,28 @@ fi
 exec "\$RUNTIME" "\${runtime_args[@]}" "\$@"
 EOF
 
-cat > "$INSTALL_ROOT/bin/codex-ui-tools" <<'EOF'
+cat > "$INSTALL_ROOT/bin/codex-lab-tools" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-export CODEXUI_CODEX_COMMAND="${CODEXUI_CODEX_COMMAND:-/opt/codex-ui-linux-port/bin/codex-cli-wrapper}"
-exec /usr/bin/python3 /opt/codex-ui-linux-port/share/codex-ui-companion.py "$@"
+export CODEX_LAB_CODEX_COMMAND="${CODEX_LAB_CODEX_COMMAND:-${CODEXUI_CODEX_COMMAND:-/opt/codex-id-lab-unofficial/bin/codex-cli-wrapper}}"
+export CODEXUI_CODEX_COMMAND="$CODEX_LAB_CODEX_COMMAND"
+exec /usr/bin/python3 /opt/codex-id-lab-unofficial/share/codex-lab-companion.py "$@"
 EOF
 
-chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-ui-linux" "$INSTALL_ROOT/bin/codex-ui-tools"
+chmod 755 "$INSTALL_ROOT/bin/codex-cli-wrapper" "$INSTALL_ROOT/bin/codex-lab" "$INSTALL_ROOT/bin/codex-lab-tools"
 
-cat > "$INSTALL_ROOT/share/codex-ui-linux.desktop" <<'EOF'
+cat > "$INSTALL_ROOT/share/codex-lab.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=ChatGPT (Codex UI Linux Port)
-Name[es]=ChatGPT (Codex UI Linux Port)
+Name=Codex I+D Lab - Unofficial
+Name[es]=Codex I+D Lab - No oficial
 Comment=Unofficial Linux package using the official ChatGPT runtime
 Comment[es]=Paquete Linux no oficial con el runtime oficial de ChatGPT
-Exec=codex-ui-linux %U
-Icon=codex-ui-linux
+Exec=codex-lab %U
+Icon=codex-lab
 Terminal=false
-Categories=Utility;Development;
+Categories=Development;
 StartupNotify=true
 MimeType=x-scheme-handler/codex;
 Actions=Usage;OCR;QR;Crashes;
@@ -105,29 +112,29 @@ Actions=Usage;OCR;QR;Crashes;
 [Desktop Action Usage]
 Name=Codex usage
 Name[es]=Uso de Codex
-Exec=codex-ui-tools panel
+Exec=codex-lab-tools panel
 Icon=view-statistics
 
 [Desktop Action OCR]
 Name=Capture text (OCR)
 Name[es]=Capturar texto (OCR)
-Exec=codex-ui-tools ocr
+Exec=codex-lab-tools ocr
 Icon=edit-select-text
 
 [Desktop Action QR]
 Name=Capture QR privately
 Name[es]=Capturar QR de forma privada
-Exec=codex-ui-tools qr
+Exec=codex-lab-tools qr
 Icon=view-barcode-qr
 
 [Desktop Action Crashes]
 Name=Crash reports
 Name[es]=Informes de fallos
-Exec=codex-ui-tools crashes
+Exec=codex-lab-tools crashes
 Icon=tools-report-bug
 EOF
 
-cat > "$INSTALL_ROOT/share/icons/hicolor/scalable/apps/codex-ui-linux.svg" <<'EOF'
+cat > "$INSTALL_ROOT/share/icons/hicolor/scalable/apps/codex-lab.svg" <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#111827"/>
   <path d="M256 72 414 164v184L256 440 98 348V164L256 72Z" fill="none" stroke="#67e8f9" stroke-width="34" stroke-linejoin="round"/>

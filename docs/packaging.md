@@ -4,15 +4,15 @@ The package bundles the official Linux-native ChatGPT runtime without modifying 
 
 Installed paths:
 
-- `/opt/codex-ui-linux-port`
-- `/usr/bin/codex-ui-linux`
-- `/usr/bin/codex-ui-update`
-- `/usr/bin/codexui-update` (compatibility alias)
-- `/usr/bin/codex-ui-tools`
-- `/usr/lib/systemd/user/codex-ui-companion.service`
-- `/usr/share/applications/codex-ui-linux.desktop`
-- `/usr/share/applications/codex-ui-tools.desktop`
-- `/usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg`
+- `/opt/codex-id-lab-unofficial`
+- `/usr/bin/codex-lab`
+- `/usr/bin/codex-lab-install`
+- `/usr/bin/codex-lab-update` (compatibility alias)
+- `/usr/bin/codex-lab-tools`
+- `/usr/lib/systemd/user/codex-lab-companion.service`
+- `/usr/share/applications/codex-lab.desktop`
+- `/usr/share/applications/codex-lab-tools.desktop`
+- `/usr/share/icons/hicolor/scalable/apps/codex-lab.svg`
 
 Runtime dependencies:
 
@@ -28,7 +28,7 @@ Runtime dependencies:
 
 The Arch/CachyOS package is the primary supported target. Debian and Fedora packages are experimental portability targets. All packages carry the upstream runtime and require compatible host libraries.
 
-Generated packages use `Custom` license metadata because they aggregate repository-authored material and upstream components governed by separate terms. Project license files are installed under `/usr/share/licenses/codex-ui-linux-port`.
+Generated packages use `Custom` license metadata because they aggregate repository-authored material and upstream components governed by separate terms. Project license files are installed under `/usr/share/licenses/codex-id-lab-unofficial`.
 
 ## Release Build Authority
 
@@ -37,9 +37,9 @@ GitHub Actions is the authoritative builder for release artifacts. Generated rel
 A release run must generate and validate:
 
 - `chatgpt_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-ui-linux-port_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
+- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 
@@ -59,15 +59,15 @@ El paquete incluye el runtime Linux nativo oficial de ChatGPT sin modificar su b
 
 Rutas instaladas:
 
-- `/opt/codex-ui-linux-port`
-- `/usr/bin/codex-ui-linux`
-- `/usr/bin/codex-ui-update`
-- `/usr/bin/codexui-update` (alias de compatibilidad)
-- `/usr/bin/codex-ui-tools`
-- `/usr/lib/systemd/user/codex-ui-companion.service`
-- `/usr/share/applications/codex-ui-linux.desktop`
-- `/usr/share/applications/codex-ui-tools.desktop`
-- `/usr/share/icons/hicolor/scalable/apps/codex-ui-linux.svg`
+- `/opt/codex-id-lab-unofficial`
+- `/usr/bin/codex-lab`
+- `/usr/bin/codex-lab-install`
+- `/usr/bin/codex-lab-update` (alias de compatibilidad)
+- `/usr/bin/codex-lab-tools`
+- `/usr/lib/systemd/user/codex-lab-companion.service`
+- `/usr/share/applications/codex-lab.desktop`
+- `/usr/share/applications/codex-lab-tools.desktop`
+- `/usr/share/icons/hicolor/scalable/apps/codex-lab.svg`
 
 Dependencias de ejecución:
 
@@ -83,7 +83,7 @@ Dependencias de ejecución:
 
 El paquete Arch/CachyOS es el objetivo principal. Los paquetes Debian y Fedora son objetivos experimentales de portabilidad. Todos incluyen el runtime upstream y requieren bibliotecas compatibles del host.
 
-Los paquetes generados usan metadatos de licencia `Custom` porque agregan material propio del repositorio y componentes upstream sometidos a términos distintos. Las licencias se instalan bajo `/usr/share/licenses/codex-ui-linux-port`.
+Los paquetes generados usan metadatos de licencia `Custom` porque agregan material propio del repositorio y componentes upstream sometidos a términos distintos. Las licencias se instalan bajo `/usr/share/licenses/codex-id-lab-unofficial`.
 
 ## Autoridad del build de release
 

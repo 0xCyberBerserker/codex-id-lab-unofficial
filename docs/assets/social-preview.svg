@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
-  <title id="title">Codex UI Linux Port social preview</title>
-  <desc id="desc">Codex UI Linux Port Arch Debian RPM Unofficial Linux packaging automation</desc>
+  <title id="title">Codex I+D Lab - Unofficial social preview</title>
+  <desc id="desc">Codex I+D Lab - Unofficial Arch Debian RPM Unofficial Linux packaging automation</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0b1220"/>
@@ -10,7 +10,7 @@
   </defs>
   <rect width="1280" height="640" fill="url(#bg)"/>
   <rect x="82" y="82" width="1116" height="476" rx="28" fill="#0f172a" fill-opacity="0.44" stroke="#60a5fa" stroke-opacity="0.35"/>
-  <text x="118" y="230" fill="#eff6ff" font-family="DejaVu Sans, Arial, sans-serif" font-size="84" font-weight="700">Codex UI Linux Port</text>
+  <text x="118" y="230" fill="#eff6ff" font-family="DejaVu Sans, Arial, sans-serif" font-size="84" font-weight="700">Codex I+D Lab - Unofficial</text>
   <text x="118" y="320" fill="#93c5fd" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="600">Arch · Debian · RPM</text>
   <text x="118" y="396" fill="#dbeafe" font-family="DejaVu Sans, Arial, sans-serif" font-size="34">Unofficial Linux packaging automation</text>
   <text x="118" y="500" fill="#bfdbfe" font-family="DejaVu Sans, Arial, sans-serif" font-size="28">Made with 🖤 in Barcelona City 🇪🇸</text>

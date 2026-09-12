@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="docs/assets/codex-ui-linux-port.svg" alt="Codex UI Linux Port icon" width="132">
+  <img src="docs/assets/codex-lab.svg" alt="Codex I+D Lab - Unofficial icon" width="132">
 </p>
 
 <p align="center">
-  <strong>Codex UI Linux Port</strong>
+  <strong>Codex I+D Lab - Unofficial</strong>
 </p>
 
 <p align="center">
@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/0xCyberBerserker/codex-ui-linux-port/actions/workflows/release.yml"><img alt="Release workflow" src="https://img.shields.io/github/actions/workflow/status/0xCyberBerserker/codex-ui-linux-port/release.yml?branch=main&label=release%20build"></a>
-  <a href="https://github.com/0xCyberBerserker/codex-ui-linux-port/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/0xCyberBerserker/codex-ui-linux-port?label=latest%20release"></a>
+  <a href="https://github.com/0xCyberBerserker/codex-id-lab-unofficial/actions/workflows/release.yml"><img alt="Release workflow" src="https://img.shields.io/github/actions/workflow/status/0xCyberBerserker/codex-id-lab-unofficial/release.yml?branch=main&label=release%20build"></a>
+  <a href="https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/0xCyberBerserker/codex-id-lab-unofficial?label=latest%20release"></a>
   <img alt="Targets" src="https://img.shields.io/badge/targets-Arch%20%7C%20Debian%20%7C%20RPM-ffb454">
   <img alt="Status" src="https://img.shields.io/badge/status-public%20automation-8fd18f">
   <img alt="Unofficial" src="https://img.shields.io/badge/OpenAI-unofficial-lightgrey">
@@ -64,25 +64,33 @@ The automation was built to turn unavoidable waiting periods such as long builds
 
 ## Install Or Update
 
+Fresh install, update, or migration from the former project name:
+
 ```bash
-codex-ui-update
+bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
+```
+
+After installation:
+
+```bash
+codex-lab-install
 ```
 
 Check without installing:
 
 ```bash
-codex-ui-update --check
+codex-lab-install --check
 ```
 
 Run a smoke test:
 
 ```bash
-codex-ui-update --smoke
+codex-lab-install --smoke
 ```
 
 Public release downloads do not require authentication. Private forks can use `GITHUB_TOKEN` or `GH_TOKEN`.
 
-The legacy `codexui-update` command remains available as a compatibility alias and accepts the same flags.
+`codex-lab-update` is the short alias. Former `codex-ui-*` commands remain temporarily available only for migration.
 
 ## Release Pipeline
 
@@ -92,18 +100,18 @@ Every scheduled or manual run downloads the current official Linux package, pins
 
 ### Automatic Feature Tracking
 
-Each run preserves the official Linux runtime unchanged. Voice, dictation, native app tools, plugins, and later upstream features arrive with the next signed official package. XWayland remains the default; native Wayland can be requested with `CODEXUI_OZONE_PLATFORM=wayland` and remains experimental upstream.
+Each run preserves the official Linux runtime unchanged. Voice, dictation, native app tools, plugins, and later upstream features arrive with the next signed official package. XWayland remains the default; native Wayland can be requested with `CODEX_LAB_OZONE_PLATFORM=wayland` and remains experimental upstream.
 
 ### Seguimiento automático de funciones
 
-Cada ejecución conserva sin modificar el runtime Linux oficial. Voz, dictado, herramientas nativas, plugins y funciones upstream posteriores llegan con el siguiente paquete oficial firmado. XWayland sigue siendo el modo predeterminado; Wayland nativo puede solicitarse con `CODEXUI_OZONE_PLATFORM=wayland` y continúa siendo experimental upstream.
+Cada ejecución conserva sin modificar el runtime Linux oficial. Voz, dictado, herramientas nativas, plugins y funciones upstream posteriores llegan con el siguiente paquete oficial firmado. XWayland sigue siendo el modo predeterminado; Wayland nativo puede solicitarse con `CODEX_LAB_OZONE_PLATFORM=wayland` y continúa siendo experimental upstream.
 
 Required release assets:
 
 - `chatgpt_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-ui-linux-port_$VERSION_amd64.deb`
-- `codex-ui-linux-port-$VERSION-1.x86_64.rpm`
+- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 

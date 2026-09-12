@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "codex-ui-companion.py"
+MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "codex-lab-companion.py"
 SPEC = importlib.util.spec_from_file_location("codex_ui_companion", MODULE_PATH)
 assert SPEC and SPEC.loader
 companion = importlib.util.module_from_spec(SPEC)
@@ -80,7 +80,7 @@ class LocalIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(os.environ, {"XDG_DATA_HOME": directory}):
                 self.assertIsNone(companion.local_tessdata_directory())
-                tessdata = Path(directory) / "codex-ui-linux-port" / "tessdata"
+                tessdata = Path(directory) / "codex-id-lab-unofficial" / "tessdata"
                 tessdata.mkdir(parents=True)
                 (tessdata / "spa.traineddata").write_bytes(b"test")
                 self.assertEqual(companion.local_tessdata_directory(), tessdata)
@@ -88,7 +88,7 @@ class LocalIntegrationTest(unittest.TestCase):
     def test_socket_uses_shared_runtime_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(os.environ, {"XDG_RUNTIME_DIR": directory}):
-                expected = Path(directory) / "codex-ui-linux-port" / "companion.sock"
+                expected = Path(directory) / "codex-id-lab-unofficial" / "companion.sock"
                 self.assertEqual(companion.companion_socket_path(), str(expected))
                 self.assertEqual(expected.parent.stat().st_mode & 0o777, 0o700)
 

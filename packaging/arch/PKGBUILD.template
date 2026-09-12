@@ -1,10 +1,13 @@
-pkgname=codex-ui-linux-port
+pkgname=codex-id-lab-unofficial
 pkgver=@VERSION@
 pkgrel=1
-pkgdesc="Unofficial Codex UI Linux port"
+pkgdesc="Codex I+D Lab - Unofficial"
 arch=('x86_64')
-url="https://github.com/0xCyberBerserker/codex-ui-linux-port"
+url="https://github.com/0xCyberBerserker/codex-id-lab-unofficial"
 license=('custom')
+provides=('codex-ui-linux-port')
+conflicts=('codex-ui-linux-port')
+replaces=('codex-ui-linux-port')
 depends=('alsa-lib' 'at-spi2-core' 'cairo' 'cups' 'dbus' 'expat' 'gcc-libs' 'gdk-pixbuf2' 'glib2' 'gtk3' 'libdrm' 'libnotify' 'libusb' 'libx11' 'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'nodejs' 'curl' 'jq' 'desktop-file-utils' 'pyside6' 'spectacle' 'tesseract' 'tesseract-data-eng' 'tesseract-data-spa' 'zbar')
 source=("${pkgname}-${pkgver}-1-x86_64.pkg.tar.zst")
 sha256sums=('@SHA256@')
