@@ -30,7 +30,7 @@ codex-lab-install --check
 codex-lab-install --smoke
 ```
 
-`codex-lab-update` is the short alias with the same flags. Former `codex-ui-*` commands remain temporarily available only for migration.
+`codex-lab-update` is the short alias with the same flags. Legacy `codex-ui-*` launchers are removed during migration.
 
 The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 
@@ -94,7 +94,7 @@ codex-lab-install --check
 codex-lab-install --smoke
 ```
 
-`codex-lab-update` es el alias corto con los mismos flags. Los comandos anteriores `codex-ui-*` se mantienen temporalmente sólo para la migración.
+`codex-lab-update` es el alias corto con los mismos flags. Los lanzadores antiguos `codex-ui-*` se eliminan durante la migración.
 
 El smoke test lanza Codex UI con un perfil temporal y comprueba que el runtime nativo permanece activo.
 

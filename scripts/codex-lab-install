@@ -73,7 +73,7 @@ sync_desktop_entry() {
   local system_dir="${CODEX_LAB_SYSTEM_APPLICATIONS_DIR:-${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}}"
   local user_dir="${CODEX_LAB_USER_APPLICATIONS_DIR:-${CODEXUI_USER_APPLICATIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/applications}}"
   local entry system_entry user_entry
-  local backup desktop_dir desktop_entry shortcut
+  local backup desktop_dir desktop_entry legacy_bin_dir shortcut
 
   for entry in codex-lab.desktop codex-lab-tools.desktop; do
     system_entry="$system_dir/$entry"
@@ -101,13 +101,24 @@ sync_desktop_entry() {
     fi
   done
 
-  for entry in codex-ui-linux.desktop codex-ui-tools.desktop; do
+  for entry in Codex.desktop codex-ui-linux.desktop codex-ui-tools.desktop; do
     user_entry="$user_dir/$entry"
     if [[ -e "$user_entry" || -L "$user_entry" ]]; then
       backup="$user_entry.bak-codex-lab-migration-$(date +%Y%m%d-%H%M%S)"
       cp -p -- "$user_entry" "$backup"
       rm -f -- "$user_entry"
       echo "$PROGRAM: preserved and removed legacy desktop override: $entry"
+    fi
+  done
+
+  legacy_bin_dir="${CODEX_LAB_USER_BIN_DIR:-$HOME/.local/bin}"
+  for entry in codex-ui-linux codex-ui-update codexui-update codex-ui-tools; do
+    user_entry="$legacy_bin_dir/$entry"
+    if [[ -e "$user_entry" || -L "$user_entry" ]]; then
+      backup="$user_entry.bak-codex-lab-migration-$(date +%Y%m%d-%H%M%S)"
+      cp -p -- "$user_entry" "$backup"
+      rm -f -- "$user_entry"
+      echo "$PROGRAM: preserved and removed legacy user launcher: $entry"
     fi
   done
 

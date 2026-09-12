@@ -34,7 +34,7 @@ Private forks or rate-limited environments can authenticate with `GITHUB_TOKEN` 
 codex-lab-install --smoke
 ```
 
-`codex-lab-update` is the short alias with the same flags. Former `codex-ui-*` commands remain temporarily available only for migration.
+`codex-lab-update` is the short alias with the same flags. Legacy `codex-ui-*` launchers are removed during migration.
 
 The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 

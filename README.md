@@ -90,7 +90,7 @@ codex-lab-install --smoke
 
 Public release downloads do not require authentication. Private forks can use `GITHUB_TOKEN` or `GH_TOKEN`.
 
-`codex-lab-update` is the short alias. Former `codex-ui-*` commands remain temporarily available only for migration.
+`codex-lab-update` is the short alias. Legacy `codex-ui-*` launchers are removed during migration.
 
 ## Release Pipeline
 

@@ -18,18 +18,10 @@ stage_common() {
   cp -a "$PKGROOT/opt/codex-id-lab-unofficial" "$target/opt/"
   install -m 755 "$ROOT/scripts/codex-lab-install" "$target/opt/codex-id-lab-unofficial/bin/codex-lab-install"
   ln -s codex-lab-install "$target/opt/codex-id-lab-unofficial/bin/codex-lab-update"
-  ln -s codex-lab "$target/opt/codex-id-lab-unofficial/bin/codex-ui-linux"
-  ln -s codex-lab-install "$target/opt/codex-id-lab-unofficial/bin/codex-ui-update"
-  ln -s codex-lab-install "$target/opt/codex-id-lab-unofficial/bin/codexui-update"
-  ln -s codex-lab-tools "$target/opt/codex-id-lab-unofficial/bin/codex-ui-tools"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab "$target/usr/bin/codex-lab"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab-install "$target/usr/bin/codex-lab-install"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab-update "$target/usr/bin/codex-lab-update"
   ln -s /opt/codex-id-lab-unofficial/bin/codex-lab-tools "$target/usr/bin/codex-lab-tools"
-  ln -s /opt/codex-id-lab-unofficial/bin/codex-ui-linux "$target/usr/bin/codex-ui-linux"
-  ln -s /opt/codex-id-lab-unofficial/bin/codex-ui-update "$target/usr/bin/codex-ui-update"
-  ln -s /opt/codex-id-lab-unofficial/bin/codexui-update "$target/usr/bin/codexui-update"
-  ln -s /opt/codex-id-lab-unofficial/bin/codex-ui-tools "$target/usr/bin/codex-ui-tools"
   install -m 644 "$PKGROOT/opt/codex-id-lab-unofficial/share/codex-lab.desktop" "$target/usr/share/applications/codex-lab.desktop"
   install -m 644 "$PKGROOT/opt/codex-id-lab-unofficial/share/codex-lab-tools.desktop" "$target/usr/share/applications/codex-lab-tools.desktop"
   install -m 644 "$PKGROOT/opt/codex-id-lab-unofficial/share/systemd/user/codex-lab-companion.service" "$target/usr/lib/systemd/user/codex-lab-companion.service"
@@ -192,10 +184,6 @@ tar -xf %{_sourcedir}/${NAME}-${VERSION}-payload.tar -C %{buildroot}
 /usr/bin/codex-lab-install
 /usr/bin/codex-lab-update
 /usr/bin/codex-lab-tools
-/usr/bin/codex-ui-linux
-/usr/bin/codex-ui-update
-/usr/bin/codexui-update
-/usr/bin/codex-ui-tools
 /usr/lib/systemd/user/codex-lab-companion.service
 /usr/share/applications/codex-lab.desktop
 /usr/share/applications/codex-lab-tools.desktop

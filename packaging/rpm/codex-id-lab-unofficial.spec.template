@@ -57,10 +57,6 @@ tar -xf %{_sourcedir}/codex-id-lab-unofficial-%{version}-payload.tar -C %{buildr
 /usr/bin/codex-lab-install
 /usr/bin/codex-lab-update
 /usr/bin/codex-lab-tools
-/usr/bin/codex-ui-linux
-/usr/bin/codex-ui-update
-/usr/bin/codexui-update
-/usr/bin/codex-ui-tools
 /usr/lib/systemd/user/codex-lab-companion.service
 /usr/share/applications/codex-lab.desktop
 /usr/share/applications/codex-lab-tools.desktop

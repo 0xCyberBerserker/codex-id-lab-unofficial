@@ -12,8 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Scheduled releases verify the signed official Linux repository and inherit upstream voice, dictation, app tools, plugins, and later features without minified-code patches.
 - Discord Rich Presence activities are now selected randomly without immediate repetition.
 - Standardized the updater command as `codex-lab-install`; `codex-lab-update` remains available as a compatibility alias with identical flags.
-- Renamed the project to Codex I+D Lab - Unofficial and standardized public commands under `codex-lab*`; former command names remain temporary migration aliases.
+- Renamed the project to Codex I+D Lab - Unofficial and standardized public commands under `codex-lab*`; legacy command aliases are removed during migration.
 - The installer now refreshes the application-menu entry and desktop shortcut while preserving customized legacy launchers.
+- Packages now expose only `codex-lab*` commands; migration removes obsolete per-user `codex-ui*` wrappers.
 
 ### Fixed
 
@@ -53,8 +54,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) y los 
 - Las releases programadas verifican el repositorio Linux oficial firmado y heredan voz, dictado, herramientas, plugins y funciones posteriores sin patches sobre código minificado.
 - Las actividades de Discord Rich Presence ahora se eligen aleatoriamente sin repetición inmediata.
 - Estandarizado el comando como `codex-lab-install`; `codex-lab-update` permanece como alias compatible con los mismos flags.
-- Renombrado el proyecto a Codex I+D Lab - Unofficial y estandarizados los comandos públicos bajo `codex-lab*`; los nombres anteriores quedan como alias temporales de migración.
+- Renombrado el proyecto a Codex I+D Lab - Unofficial y estandarizados los comandos públicos bajo `codex-lab*`; los aliases antiguos se eliminan durante la migración.
 - El instalador actualiza la entrada del menú de aplicaciones y el acceso directo del escritorio, conservando los lanzadores antiguos personalizados.
+- Los paquetes exponen sólo comandos `codex-lab*`; la migración retira los wrappers de usuario `codex-ui*` obsoletos.
 
 ### Corregido
 
