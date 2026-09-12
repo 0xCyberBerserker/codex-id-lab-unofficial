@@ -53,7 +53,9 @@ case "$FORMAT" in
     [[ "$(rpm -qp --qf '%{VERSION}-%{RELEASE}' "$PACKAGE" 2>/dev/null)" == "$VERSION-$REVISION" ]] || fail "RPM package version mismatch"
     [[ "$(rpm -qp --qf '%{ARCH}' "$PACKAGE" 2>/dev/null)" == "x86_64" ]] || fail "RPM package architecture mismatch"
     rpm -qp --requires "$PACKAGE" 2>/dev/null | grep -Fxq gh || fail "RPM package misses gh"
-    rpm2cpio "$PACKAGE" 2>/dev/null | (cd "$payload" && cpio -id --quiet) || fail "invalid RPM payload"
+    # Drain archive padding after cpio's trailer so pipefail does not report a
+    # false SIGPIPE from rpm2cpio. Both decoder and extractor still must succeed.
+    rpm2cpio "$PACKAGE" 2>/dev/null | (cd "$payload" && cpio -id --quiet && cat >/dev/null) || fail "invalid RPM payload"
     ;;
   *) fail "unsupported package format: $FORMAT" ;;
 esac
