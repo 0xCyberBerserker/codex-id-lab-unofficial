@@ -71,6 +71,24 @@ serially without code/assertion changes. A Qt fixture's 600 ms quit preceded IPC
 completion under package compression; only that fixture's wait budget increased,
 with identical content/privacy assertions. Production deadlines are unchanged.
 
+### Native Arch lifecycle follow-up
+
+After explicit installation/removal test authorization, real pacman installed and
+removed revision 6 successfully in a rootless UID/GID-mapped namespace. Dependency
+checks used a private copy of installed host package metadata, excluding this app;
+this is not an independent clean-distribution image. Host paths were read-only,
+home/runtime/network masked, and pacman's download sandbox was not disabled.
+The installed payload digest, original ASAR and launcher presence matched before
+removal; package registration and app/launcher absence were checked afterwards.
+Evidence: `build/qa/r6-arch-native-lifecycle-rootless.log`.
+
+Initial harness attempts exposed a missing mountpoint, omitted ALPM version file,
+and single-UID mapping incompatible with pacman's download user. The corrected
+harness uses the existing subordinate UID/GID mappings, without host database
+upgrade, signature override, dependency-check bypass or new tool installation.
+Actual host mutation remains NOT_RUN: its revision 1 UI/tasks are active and
+administrative authentication is required. Accounts and services are unchanged.
+
 ### Remaining gates
 
 Phase 1 engineering and phase 3 framework/package work have local evidence.
@@ -121,5 +139,15 @@ emparejamiento remoto, closures de helpers/AppImage, schemas desconocidos,
 migración del host y firma/promoción necesitan sus gates. No se instaló,
 desinstaló, accedió a cuentas/datos, cambió servicios, cerró apps ni publicó nada.
 El WIP protegido queda intacto y el checkpoint privado conserva la continuidad.
+
+Tras autorizar las pruebas de instalación/desinstalación, pacman real instaló y
+eliminó revisión 6 dentro de un namespace rootless con mapeo UID/GID completo.
+Se comprobaron payload, ASAR y launcher antes; ausencia de paquete/app/launcher
+después. Las dependencias se validaron contra una copia privada de metadata del
+host: no equivale a una imagen limpia independiente. Sin red ni acceso al home del
+usuario ni desactivar sandbox, firmas o comprobación de dependencias. El harness
+inicial necesitó corregir mountpoint, versión ALPM y mapeo del usuario de descarga;
+no se actualizó la base del host ni se instalaron herramientas. El host permanece
+en revisión 1: UI/tareas abiertas y autenticación administrativa pendiente.
 
 Made with 🖤 in Barcelona City 🇪🇸
