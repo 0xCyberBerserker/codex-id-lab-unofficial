@@ -62,7 +62,7 @@ jobs:
       - name: Run unit and package tests
         run: |
           python3 -m unittest discover -s tests -v
-          node --test scripts/lib/linux-features.test.js tests/lab-features.test.js tests/runtime-features.test.js tests/global-dictation.test.js tests/shared-app-server.test.js tests/computer-use-isolated.test.js linux-features/computer-use-linux/native.test.js
+          node --test scripts/lib/linux-features.test.js tests/lab-features.test.js tests/runtime-features.test.js tests/global-dictation.test.js tests/shared-app-server.test.js tests/computer-use-isolated.test.js tests/computer-use-policy.test.js linux-features/computer-use-linux/native.test.js
 
       - name: Enforce repository privacy boundary
         run: scripts/privacy-audit

@@ -24,7 +24,7 @@
           "source": "linux-features/computer-use-linux/native-service.mjs",
           "destination": "linux-features/computer-use-linux/native-service.mjs",
           "upstreamSha256": "3b7cb07cc7640aec56f6d638426ffd9f2500c30ed7ed6825c1e243ceb6b5fe5f",
-          "modifications": ["Added MIT attribution; bounded JSON-RPC framing/concurrency, mandatory app targeting, input/image limits and initialization drift rejection. No backend binary or runtime activation imported."]
+          "modifications": ["Added MIT attribution; bounded JSON-RPC framing/concurrency, mandatory app targeting, input/image limits and initialization drift rejection. Pins system PATH and portal-only screenshot capture, preventing ambient CLI fallback. No backend binary or runtime activation imported."]
         },
         {
           "source": "linux-features/computer-use-linux/native-client.mjs",

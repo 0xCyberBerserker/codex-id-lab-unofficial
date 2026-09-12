@@ -83,7 +83,11 @@ export function createNativeService({
   async function start() {
     if (failure) throw failure;
     if (!ready) ready = (async () => {
-      child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+      child = spawn(command, args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        // Lab never falls back from portal denial to a CLI capture or user PATH.
+        env: { ...process.env, PATH: '/usr/bin:/bin', CODEX_COMPUTER_USE_SCREENSHOT_BACKEND: 'portal' },
+      });
       child.on('error', error => stop(new Error(`Linux Computer Use backend: ${error.message}`)));
       child.on('exit', (code, signal) => stop(new Error(`Linux Computer Use backend exited (${signal ?? code}); not replayed`)));
       child.stdin.on('error', error => stop(error));

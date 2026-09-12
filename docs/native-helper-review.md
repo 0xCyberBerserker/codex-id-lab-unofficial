@@ -49,6 +49,13 @@ treated as a complete rights grant.
 Native staging remains BLOCKED on focused backend security review and controlled
 positive screenshot/accessibility/input acceptance. Notice collection is not legal
 certification or proof of those capabilities. Development binaries are not shipped.
+Focused defensive review inspected command/process cancellation, target/PID
+selection, portal denial and screenshot fallbacks. The local transport now fixes
+`PATH=/usr/bin:/bin` and `CODEX_COMPUTER_USE_SCREENSHOT_BACKEND=portal`; a regression
+proves ambient executable/capture overrides cannot select the CLI fallback. This
+does not sandbox the backend automatically or grant desktop/input consent. Browser
+host, setup and unrestricted desktop tools remain excluded. A sandbox-preserving
+positive capability/permission harness is still required before activation.
 
 ### Agent Workspace
 
@@ -96,6 +103,11 @@ y excluye 27 no alcanzables; no descarga fallbacks ni modifica crates. Rechaza
 origen, checksum, texto o ruta incorrectos. Se preserva la declaración upstream de
 transición Apache/MIT y términos documentales, sin considerarla certificación legal.
 Los binarios de desarrollo no se distribuyen.
+La revisión defensiva acotada examinó cancelación/procesos, destino/PID, denegación
+de portal y fallbacks. El transporte fija PATH del sistema y backend portal, con
+regresión frente a overrides ambientales. No concede permisos ni crea sandbox
+automático; browser host, setup y herramientas globales siguen fuera. Falta un
+harness positivo de capacidades/permisos que conserve la frontera de aislamiento.
 
 Agent Workspace se resolvió a v0.3.2/commit y archive SHA anteriores. Su lock
 incluye 718 paquetes, 29 de Git; GPUI/Zed es incondicional y no hay feature Cargo
