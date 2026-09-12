@@ -86,8 +86,35 @@ Initial harness attempts exposed a missing mountpoint, omitted ALPM version file
 and single-UID mapping incompatible with pacman's download user. The corrected
 harness uses the existing subordinate UID/GID mappings, without host database
 upgrade, signature override, dependency-check bypass or new tool installation.
-Actual host mutation remains NOT_RUN: its revision 1 UI/tasks are active and
-administrative authentication is required. Accounts and services are unchanged.
+At that checkpoint host mutation was NOT_RUN due active UI/tasks and required
+administrative authentication. The authorized follow-up below supersedes that gate.
+
+### Authorized host lifecycle follow-up
+
+After the user closed the UI and authorized continuation, native pacman upgraded
+revision 1 to 6, removed revision 6, and reinstalled the exact verified revision 6
+archive successfully. Administrative authentication used the system's pkexec
+dialog; no password was collected. No new dependencies were installed, no signature
+or sandbox policy was overridden, and removal did not recursively remove dependencies.
+
+Final state: `codex-id-lab-unofficial 26.908.40834-6`; pacman reports 6,868 files and
+zero missing. Installed manifest/build identity, full payload digest and original
+ASAR digest match this candidate. Native CLI reports `0.154.0-alpha.6.2`.
+All four `codex-lab*` launcher targets and system desktop entries validate; the
+existing executable desktop shortcut already uses the correct command/icon.
+The companion remains inactive; no personal service was enabled or stopped.
+Normal distro transaction hooks refreshed caches/user-manager configuration and
+created their configured Snapper snapshots.
+
+A private non-recursive archive of revision 1's package-owned files and package
+description was preserved before upgrade; SHA-256
+`22edb78c1a09bc76eca09531796368a0f8cf368c2e53a740a0f1f4eef386c643`.
+This is not automatic data-schema rollback or a raw package-database restore.
+Evidence: `build/qa/r6-host-install.log`, `r6-host-uninstall.log`,
+`r6-host-reinstall.log`, and `r6-host-runtime-anonymous-smoke.log`.
+A disposable copy of the installed runtime passed actual anonymous software-X11
+window startup with home/network isolated and Chromium sandbox retained. No host
+account/profile, microphone, playback or authenticated voice functionality was tested.
 
 ### Remaining gates
 
@@ -96,13 +123,14 @@ Phases 2 and 4–7 must not be represented as fully accepted: live builder trust
 desktop factory/authenticated tasks, voice/dictation/microphone, real capture/
 insertion/playback, positive Computer Use capabilities, remote pairing/revocation,
 Agent Workspace closure, unknown data-schema rollback, global manager repair,
-AppImage source/portability and actual host migration remain blocked or NOT_RUN.
+AppImage source/portability and authenticated host acceptance remain blocked or NOT_RUN.
 Unknown schema rollback and host-wide manager repair are not silently implemented.
 Upstream updates inherit delivered native functions; unreviewed patches are never
 autoimported and account/server entitlements are never fabricated.
 
-No host installation/uninstallation, private account/data access, personal service
-changes, app termination, push, PR, remote Actions or publication was performed.
+Host package lifecycle is now verified as described above. No private account/data
+access, personal service enablement/termination, push, PR, remote Actions or
+publication was performed. The user closed the original UI before the host test.
 The protected checkout's pre-existing changes are preserved; there is no automatic
 merge into it. The private Git checkpoint records exact results and the next gates.
 
@@ -136,8 +164,9 @@ PKGBUILD/.SRCINFO AUR fijan revisión 6 y su checksum validado; no se publicaron
 Fases 1/3 con evidencia local; aceptación completa de 2 y 4–7 pendiente. Voz y
 dictado autenticados, micrófono/portales, tareas reales, captura/input/reproducción,
 emparejamiento remoto, closures de helpers/AppImage, schemas desconocidos,
-migración del host y firma/promoción necesitan sus gates. No se instaló,
-desinstaló, accedió a cuentas/datos, cambió servicios, cerró apps ni publicó nada.
+aceptación autenticada del host y firma/promoción necesitan sus gates. La prueba
+autorizada del paquete en el host se completó; no se accedió a cuentas/datos,
+habilitó/detuvo servicios personales ni publicó nada.
 El WIP protegido queda intacto y el checkpoint privado conserva la continuidad.
 
 Tras autorizar las pruebas de instalación/desinstalación, pacman real instaló y
@@ -147,7 +176,20 @@ después. Las dependencias se validaron contra una copia privada de metadata del
 host: no equivale a una imagen limpia independiente. Sin red ni acceso al home del
 usuario ni desactivar sandbox, firmas o comprobación de dependencias. El harness
 inicial necesitó corregir mountpoint, versión ALPM y mapeo del usuario de descarga;
-no se actualizó la base del host ni se instalaron herramientas. El host permanece
-en revisión 1: UI/tareas abiertas y autenticación administrativa pendiente.
+no se actualizó la base del host ni se instalaron herramientas. En aquel checkpoint
+el host permanecía en revisión 1, pendiente de cierre y autenticación.
+
+Después del cierre de la UI por el usuario y su autorización de continuación,
+pacman actualizó 1 → 6, desinstaló 6 y reinstaló el mismo archivo verificado: PASS.
+La autenticación se realizó mediante pkexec, sin recoger contraseñas. Queda revisión
+6 instalada: 6.868 archivos, ninguno ausente, manifiesto/payload/ASAR correctos y
+CLI `0.154.0-alpha.6.2`. Lanzadores, entradas de menú e icono existente del escritorio
+validan; no se añadieron dependencias ni se habilitaron/detuvieron servicios.
+Los hooks normales de la distro actualizaron caches/configuración y sus snapshots.
+Se conserva un backup privado no recursivo de archivos del paquete 1 y descripción,
+con el SHA indicado arriba; no es rollback automático de datos ni restauración de DB.
+Una copia desechable del runtime instalado pasó arranque de ventana anónima X11,
+sin cuenta/red/directorios personales y conservando sandbox. Voz, dictado y permisos
+reales del micrófono siguen sin aceptación autenticada.
 
 Made with 🖤 in Barcelona City 🇪🇸
