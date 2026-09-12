@@ -51,6 +51,6 @@ pkgbase = codex-id-lab-unofficial-bin
 	options = !strip
 	options = !debug
 	source = codex-id-lab-unofficial-bin-26.908.40834-2-x86_64.pkg.tar.zst::https://github.com/0xCyberBerserker/codex-id-lab-unofficial/releases/download/v26.908.40834-2/codex-id-lab-unofficial-26.908.40834-2-x86_64.pkg.tar.zst
-	sha256sums = 77783bc0f1bf622b1544b3414054b22a21db433af394a0978c97fe5c71dc86b8
+	sha256sums = c98c97ba06e21fc1619f6b18c719162c9c6b77174b3d42f342667e284898d29f
 
 pkgname = codex-id-lab-unofficial-bin

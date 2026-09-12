@@ -27,6 +27,11 @@ real Codex GUI, authenticated voice, FUSE mount or cross-distribution portabilit
 System shared libraries are not yet bundled into a portable dependency closure.
 The base release workflow/updater does not publish or install this format.
 
+The separate final full-payload candidate reached the real anonymous ChatGPT
+sign-in page through extract-and-run, verified visually in isolated software X11.
+This proves its renderer and AppRun startup, not authentication or desktop/audio
+permissions. See [validation boundaries](validation.md).
+
 Redistribution remains BLOCKED pending the statically linked runtime libraries'
 license/source obligations (including libfuse LGPL), and real GUI/dependency
 acceptance. The runtime's MIT notice is preserved; it does not cover those libraries.
@@ -48,6 +53,11 @@ home personal, D-Bus del escritorio ni datos. No acredita la GUI Codex, voz
 autenticada, montaje FUSE ni portabilidad entre distribuciones. Falta cerrar las
 dependencias compartidas del sistema. El workflow/updater base no publica ni
 instala este formato.
+
+El candidato final con payload completo llega a la página real de login ChatGPT
+mediante extract-and-run, inspeccionada visualmente en X11 software aislado.
+Demuestra renderer y arranque AppRun, no autenticación ni permisos de audio o
+escritorio. Consulta [los límites de validación](validation.md).
 
 La redistribución queda BLOCKED por las obligaciones de licencia/código fuente de
 las bibliotecas estáticas del runtime —incluida libfuse LGPL— y por aceptación
