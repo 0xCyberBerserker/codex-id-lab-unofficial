@@ -91,6 +91,7 @@ depend = pango
 depend = systemd-libs
 depend = xdg-utils
 optdepend = pyside6: native Qt companion
+optdepend = python-websockets>=15: experimental shared-authority companion bridge
 optdepend = spectacle: interactive OCR and QR capture
 optdepend = tesseract: optional OCR
 optdepend = tesseract-data-eng: English OCR
@@ -112,7 +113,7 @@ Section: devel
 Priority: optional
 Architecture: amd64
 Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, libasound2, libcups2, libdbus-1-3, libx11-6, libx11-xcb1, libxcb1, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxkbcommon0, libxrandr2, mesa-vulkan-drivers | vulkan-icd, nodejs, curl, jq, gh, desktop-file-utils
-Suggests: python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
+Suggests: python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, python3-websockets (>= 15), kde-spectacle, tesseract-ocr, tesseract-ocr-eng, tesseract-ocr-spa, zbar-tools
 Maintainer: unofficial automation
 Provides: codex-ui-linux-port
 Conflicts: codex-ui-linux-port
@@ -170,6 +171,7 @@ Requires: nss
 Requires: pango
 Requires: xdg-utils
 Suggests: python3-pyside6
+Suggests: python3-websockets >= 15
 Suggests: spectacle
 Suggests: tesseract
 Suggests: tesseract-langpack-eng

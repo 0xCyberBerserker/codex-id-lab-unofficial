@@ -22,6 +22,6 @@
       "license": "MIT",
       "imported": false
     },
-    "blockedReason": "Main bridge contract matches. Audited helper absent; upstream global npm installation, startup skill writes and sandbox-disabling paths are excluded."
+    "blockedReason": "Main bridge matches; external backend v0.3.2 is pinned and inspected. Its 718-package lock requires unconditional GPUI/Zed Git sources; no minimal headless feature exists. Source/dependency/notice review and explicit-permission controlled acceptance remain blocked. npm installs, skill writes, private browser data and sandbox-disabling paths are excluded."
   }
 }

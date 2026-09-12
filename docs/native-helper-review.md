@@ -1,0 +1,107 @@
+# Native helper review candidates
+
+## English
+
+These are source-pinned development experiments, not shipped or approved binaries.
+The base profile and installed host are unchanged. A successful vulnerability query
+or compilation is not a complete security or redistribution audit.
+
+### Computer Use Linux
+
+Source: `ilysenko/codex-desktop-linux`, commit
+`249cd4b64d42434f51417fec4a318750d461b676`, `computer-use-linux/`, MIT.
+The reviewed source lacked Cargo.lock; a disposable development lock resolves 209
+registry dependencies, SHA-256
+`649f0144a31c75e4383bb8ddfe81d92184e6e530e687ac6211585d6587c82af2`.
+The 2026-09-12 OSV query reported zero known findings for those versions. Build
+hooks were inspected before compilation; vendored C compilation and pkg-config
+probes ran only in a read-only-source, offline bubblewrap namespace with no host
+home, desktop bus, network or input device.
+
+`cargo test --locked --offline -- --test-threads=1`: 278 PASS, zero ignored.
+An earlier concurrent run had 277 PASS and one FAIL in the continuous-output
+sub-second timing assertion; it did not reproduce serially, without source edits
+or weaker assertions. `cargo build --locked --offline --release`: PASS.
+
+| Development binary | SHA-256 |
+|---|---|
+| codex-computer-use-linux | f9902fa16b39895ac267151874ff9a35d083033de2ba18513494dcee0de05b72 |
+| codex-chrome-extension-host | 73e5ea72290b1a9f47256e0615208a0b827ee71c2896fca4f6ad92b6b05797d7 |
+| codex-computer-use-cosmic | 3a00edf847aeec875cdcc36cacc2d0c8b2392b76edcf857854e564680e613b9a |
+
+`scripts/test-computer-use-isolated BINARY SHA256` verifies the digest and real
+MCP initialization through our target-enforcing service, denial of unavailable
+window/input capabilities, diagnostics and absence of input devices. This is
+**not** a screenshot/accessibility/input acceptance test. The empty test namespace
+has no compositor/portal and no wmctrl; no host permission is widened for a PASS.
+
+The initial target-filtered collector rejected rmcp and rmcp-macros 1.8.0 because
+their crates contain no license text. The exact upstream repository/commit notice
+is now preserved and explicitly associated with each locked crate checksum,
+declared license, VCS commit and text digest in
+`third-party/computer-use/external-notices.json`. The collector never downloads a
+fallback or modifies a crate. Wrong source/checksum/text/filename fails closed.
+The reviewed Linux graph now collects 182 packages successfully (27 non-reachable
+lock entries excluded). The original upstream notice preserves its Apache/MIT
+licensing-transition statement and documentation terms; metadata alone was not
+treated as a complete rights grant.
+
+Native staging remains BLOCKED on focused backend security review and controlled
+positive screenshot/accessibility/input acceptance. Notice collection is not legal
+certification or proof of those capabilities. Development binaries are not shipped.
+
+### Agent Workspace
+
+External backend source: `agent-sh/agent-workspace-linux`, tag v0.3.2, resolved
+commit `6c7691e817e4409be1eee508dad7cf165dd68171`; source archive SHA-256
+`3bdd30de20b14c41b3e21b53fee334af701cea426f3942ae528589bb1db517e7`.
+Cargo.lock SHA-256:
+`c0b5e94fb888a02ea33b803e516e0e143debef4dade8de4b447c9e003bcfae73`.
+The package license is MIT; the lock contains 718 packages and 29 Git-sourced
+packages. GPUI and gpui_platform are unconditional dependencies on Zed, locked
+to `9bde578ef5afa84920c4300af25f9dee31c96fcf`, despite the branch-based manifest.
+There is no Cargo feature that separates a minimal headless/MCP build from this
+viewer closure. Offline metadata fails because that Git checkout is absent.
+
+The integration attempt resolved and inspected the actual backend instead of
+trusting the wrapper's license. No npm postinstall, global installation, skill
+write, browser-profile/cookie copy or sandbox-disabling option was executed or
+imported. Without explicit permissions, its MCP has no independent permission
+ceiling. Integration is BLOCKED on a reviewed source/dependency/notice closure and
+a sandbox-preserving, explicit-permission controlled runtime; it is not discarded.
+Splitting/optionalizing the upstream viewer is a larger dependency decision, not
+silently performed in this candidate.
+
+## Español
+
+Son experimentos de desarrollo fijados por fuente, no binarios distribuidos ni
+aprobados. Perfil base y host no cambian. Compilar o consultar vulnerabilidades no
+equivale a una auditoría completa de seguridad/licencias.
+
+Computer Use usa el commit MIT de Ilysenko indicado arriba. Se resolvieron 209
+dependencias con lock desechable fijado por SHA; OSV no informó de hallazgos el
+12-09-2026. Los hooks revisados se ejecutaron únicamente dentro de bubblewrap,
+sin red, home, bus del desktop ni dispositivos de entrada. Pasan 278 pruebas en
+serie; un fallo temporal bajo concurrencia no se reprodujo, sin aflojar assertions.
+Los tres binarios release se compilaron y tienen los hashes de la tabla.
+
+La prueba real MCP comprueba inicialización, rechazo de capacidades ausentes,
+diagnóstico y ausencia de dispositivos; no acredita captura, accesibilidad ni
+input positivos. No se amplían permisos para aprobarla. Redistribución y staging
+siguen BLOCKED por revisión enfocada del backend y aceptación controlada positiva,
+no por una declaración de paridad. Tras detectar ausencia de texto en rmcp y
+rmcp-macros 1.8.0, se conservó el aviso del commit exacto y se vinculó a checksum,
+licencia declarada, VCS y digest del texto. El colector recoge 182 paquetes Linux
+y excluye 27 no alcanzables; no descarga fallbacks ni modifica crates. Rechaza
+origen, checksum, texto o ruta incorrectos. Se preserva la declaración upstream de
+transición Apache/MIT y términos documentales, sin considerarla certificación legal.
+Los binarios de desarrollo no se distribuyen.
+
+Agent Workspace se resolvió a v0.3.2/commit y archive SHA anteriores. Su lock
+incluye 718 paquetes, 29 de Git; GPUI/Zed es incondicional y no hay feature Cargo
+para compilar sólo MCP/headless. Metadata offline falla por faltar ese checkout.
+Se inspeccionó la fuente real, sin postinstall npm, instaladores globales, escritura
+de skills, cookies/perfiles privados ni opciones que desactiven sandbox. Sin
+permisos explícitos, MCP carece de techo propio. Sigue BLOCKED por revisión de
+fuente/dependencias/avisos y aceptación aislada con permisos explícitos, no
+descartado. Separar el viewer exige una decisión mayor que no se aplica a escondidas.

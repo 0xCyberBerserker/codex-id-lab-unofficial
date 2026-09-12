@@ -24,6 +24,23 @@ finally:
 
 
 class NormalizeAccountDataTest(unittest.TestCase):
+    def test_shared_socket_selection_never_starts_an_independent_authority(self) -> None:
+        with patch.dict(os.environ, {"CODEX_LAB_SHARED_APP_SERVER_SOCKET": "auto", "XDG_RUNTIME_DIR": "/tmp/fixture"}), patch.object(companion, "codex_command") as command:
+            client = companion.account_client()
+            self.assertIsInstance(client, companion.SharedAccountClient)
+            self.assertEqual(client.socket_path, "/tmp/fixture/codex-id-lab-unofficial/app-server-bridge/app-server.sock")
+            command.assert_not_called()
+            client.close()
+
+    def test_task_summary_is_localized_and_does_not_expose_thread_ids(self) -> None:
+        tasks = {"status": "loaded-thread-snapshot", "items": [{"id": "private-id", "type": "active", "needs_attention": True}]}
+        for language in ("en", "es", "ca"):
+            with patch.dict(os.environ, {"CODEX_LAB_LANG": language}):
+                text = companion.tasks_text(tasks)
+                self.assertNotIn("private-id", text)
+                self.assertIn("1", text)
+                self.assertIn(companion.tr("tasks_partial"), text)
+
     def test_missing_invalid_and_decimal_percentages(self) -> None:
         invalid_values = [None, True, "42", -1, 101, float("nan"), float("inf")]
         for value in invalid_values:

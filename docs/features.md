@@ -18,10 +18,10 @@ an existing installed runtime in place.
 | AppShots | MIT patches; known-ASAR staging and roundtrip; hotkeys excluded | Controlled capture, cancellation, insertion and backend permission |
 | Read Aloud | MIT webview + local espeak adapter; stdin/owned-stop fixture; actual ASAR | Authenticated renderer and audible playback |
 | Global dictation | Wayland-only ASAR adapter; native Rust helper; private D-Bus tests; 74 dependency notice texts | Real portal permission, microphone and authenticated dictation |
-| Computer Use | Five main contracts match; MIT client/transport and 26 MCP fixture tests; no backend staged | Audited backend; separate capture/accessibility/input permission tests |
-| Shared authority | Opt-in MIT transport; private Unix ownership; real bundled CLI `/rpc` HTTP 101; known-ASAR staging | Authenticated desktop factory and companion task subscription |
+| Computer Use | Five main contracts; MIT client/transport, 26 MCP fixtures; isolated native build, 278 serial tests, 182 notices; no backend staged | Focused backend review and positive capture/accessibility/input permission tests |
+| Shared authority | Opt-in MIT transport; private Unix ownership; real CLI initialization and loaded-thread list; companion metadata-only snapshots; known-ASAR staging | Authenticated desktop factory and real nonempty-thread events |
 | Remote/mobile | Two main contracts match; no remote flags/network exposure | Account entitlement, keychain, consent, pairing and revocation |
-| Agent Workspace | Main bridge matches; no skill/installer hook | Audited helper and sandbox-preserving controlled acceptance |
+| Agent Workspace | Main bridge; pinned external v0.3.2 backend inspected; no skill/installer hook | 718-package/GPUI source closure review and explicit-permission controlled acceptance |
 
 AppShots, Read Aloud and Wayland global dictation have candidate runtime adapters. All modules are disabled
 by default. Experimental staging is local, explicitly gated and cannot be promoted
@@ -50,8 +50,9 @@ compiled, downloaded, launched or installed by the base profile.
 ## Español
 
 El puente de autoridad compartida es opt-in: valida socket privado, propiedad y
-overrides; el CLI real aislado responde HTTP 101 en `/rpc`. Tiene staging ASAR y
-diagnóstico, pero no demuestra aún observación de tareas del desktop. Consulta
+overrides; el CLI real aislado completa inicialización y listado en `/rpc`.
+El companion añade snapshots acotados sin turnos, pero no demuestra aún
+visibilidad de todas las tareas del desktop. Consulta
 [el contrato y límites](../linux-features/shared-app-server-socket/README.md).
 
 El perfil base preserva ASAR upstream. Voz, dictado nativo y funciones de
@@ -75,6 +76,11 @@ controlada de permisos, cuenta, keychain o sandbox.
 Computer Use incorpora además cliente/transporte MIT y 26 pruebas MCP, con destino
 obligatorio y framing acotado; no acreditan captura ni entrada real.
 No añaden hooks, exposición de red ni actividad deshabilitados.
+Computer Use añade build nativo aislado, 278 pruebas en serie y 182 avisos Linux;
+la prueba real rechaza capacidades ausentes, sin acreditar permisos positivos.
+Agent Workspace fija e inspecciona el backend externo v0.3.2, pero su viewer GPUI
+incondicional exige una cadena de 718 paquetes todavía no revisada.
+Consulta [la evidencia de helpers](native-helper-review.md).
 
 El ejemplo anterior solo admite un árbol desechable fresco. El builder ASAR está
 fijado con hashes transitivos, sin ejecutar scripts npm. La auditoría local del

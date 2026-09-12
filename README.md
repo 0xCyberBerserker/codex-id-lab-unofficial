@@ -44,6 +44,13 @@ and opt-in AppShots/Read Aloud/Wayland dictation build adapters. A local-only
 [AppImage recipe](docs/appimage.md) has real format/fixture tests, not GUI portability acceptance. These are not a published release
 or a global parity claim. See [feature gates](docs/features.md),
 [update recovery](docs/updater-recovery.md) and [import maintenance](docs/upstream-maintenance.md).
+Revision 4 additionally provides exact retained-candidate recovery and an opt-in
+shared-authority companion snapshot of loaded threads, without conversation reads
+or a second server. Native Computer Use development builds and notice collection
+are measured separately; runtime activation is still blocked. See
+[helper review evidence](docs/native-helper-review.md).
+Updates inherit native upstream features, but never autoimport unreviewed patches
+or grant server/account entitlements.
 
 El framework opcional se reutiliza selectivamente del snapshot MIT fijado de Ilysenko. El inventario conserva atribución y licencia; las pruebas de empaquetado no equivalen a aceptación de voz, dictado o sesión real.
 
@@ -52,6 +59,11 @@ en inglés/español/catalán, candidatos de actualización conservados y adaptad
 opt-in AppShots/Read Aloud/dictado Wayland. La receta AppImage pasa pruebas de
 formato/fixture, no aceptación GUI/portabilidad. No está publicado ni demuestra paridad global.
 Los gates funcionales y de recuperación se documentan por separado.
+La revisión 4 añade recuperación del candidato exacto y snapshots opt-in de hilos
+del mismo App Server, sin leer conversaciones ni iniciar otro servidor. Se probaron
+builds nativos de Computer Use y avisos transitivos, no activación del escritorio.
+La ingeniería del wrapper prepara actualizaciones; no autoimporta parches nuevos
+sin licencia, compatibilidad y pruebas, ni concede funciones de cuenta del servidor.
 
 ## What It Builds
 

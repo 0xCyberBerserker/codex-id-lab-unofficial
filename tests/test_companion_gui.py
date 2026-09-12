@@ -9,7 +9,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+
+try:
+    from websockets.sync.server import unix_serve
+except ImportError:
+    unix_serve = None
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +61,49 @@ runpy.run_path(sys.argv[0], run_name="__main__")
 
 @unittest.skipUnless(importlib.util.find_spec("PySide6"), "PySide6 GUI runtime unavailable")
 class CompanionGuiTests(unittest.TestCase):
+    @unittest.skipIf(unix_serve is None, "optional python-websockets unavailable")
+    def test_actual_panel_attaches_to_private_shared_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            endpoint = str(Path(directory) / "app-server.sock")
+            def handler(connection):
+                for frame in connection:
+                    message = json.loads(frame)
+                    if "id" not in message:
+                        continue
+                    method = message["method"]
+                    if method == "initialize":
+                        result = {}
+                    elif method == "thread/loaded/list":
+                        result = {"data": ["private-thread-id"]}
+                    elif method == "thread/read":
+                        self.assertFalse(message["params"]["includeTurns"])
+                        result = {"thread": {"id": "private-thread-id", "status": {"type": "active", "activeFlags": ["waitingOnApproval"]}, "preview": "private conversation"}}
+                    elif method == "account/rateLimits/read":
+                        result = {"rateLimits": {"primary": {"usedPercent": 12.5}}}
+                    else:
+                        connection.send(json.dumps({"id": message["id"], "error": {"code": -32601}}))
+                        continue
+                    connection.send(json.dumps({"id": message["id"], "result": result}))
+            with unix_serve(handler, endpoint) as server:
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                env = dict(os.environ, QT_QPA_PLATFORM="offscreen", XDG_RUNTIME_DIR=directory,
+                           CODEX_LAB_LANG="es", CODEX_LAB_SHARED_APP_SERVER_SOCKET=endpoint,
+                           CODEX_LAB_CODEX_COMMAND="/does-not-exist", CODEX_LAB_TEST_MODE="1",
+                           CODEX_LAB_TEST_DISABLE_CRASH_WATCHER="1", CODEX_LAB_TEST_GUI_REPORT="1",
+                           CODEX_LAB_TEST_PALETTE="light", CODEX_LAB_TEST_QUIT_MS="600")
+                try:
+                    result = subprocess.run([sys.executable, "-c", THEMED_RUNNER, str(ROOT / "scripts/codex-lab-companion.py"), "panel"],
+                                            env=env, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    snapshot = json.loads(result.stdout.strip().splitlines()[-1])
+                    self.assertIn("Hilos cargados: 1 · activos: 1 · atención: 1", snapshot["tasks"])
+                    self.assertNotIn("private", snapshot["tasks"])
+                    self.assertIn("87.5% restante", snapshot["remaining"])
+                finally:
+                    server.shutdown()
+                    thread.join(2)
+
     def test_actual_feature_selector_isolated_and_localized(self) -> None:
         for locale_name, title in (("en", "Linux features"), ("es", "Funciones Linux"), ("ca", "Funcions Linux")):
             with self.subTest(locale=locale_name), tempfile.TemporaryDirectory() as directory:

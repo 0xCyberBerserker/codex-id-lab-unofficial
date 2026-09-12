@@ -37,6 +37,12 @@ license/source obligations (including libfuse LGPL), and real GUI/dependency
 acceptance. The runtime's MIT notice is preserved; it does not cover those libraries.
 See [upstream runtime](https://github.com/AppImage/type2-runtime) and
 [type-2 architecture](https://docs.appimage.org/reference/architecture.html).
+The pinned source recipe was inspected without execution. Its libfuse and
+squashfuse archive pins and static linker inputs are recorded in
+`third-party/appimage/dependency-review.json`. The Alpine image lacks a digest and
+its exact musl/zlib/zstd/mimalloc package versions are not recorded for the signed
+binary. Complete source/relink closure therefore cannot be inferred from that
+recipe; downloading two archives would not close the remaining gate.
 
 ## Español
 
@@ -62,3 +68,8 @@ escritorio. Consulta [los límites de validación](validation.md).
 La redistribución queda BLOCKED por las obligaciones de licencia/código fuente de
 las bibliotecas estáticas del runtime —incluida libfuse LGPL— y por aceptación
 GUI/dependencias pendiente. Se conserva su aviso MIT, que no cubre esas bibliotecas.
+Se inspeccionó la receta fijada sin ejecutarla y se registraron sus pins y enlaces
+estáticos en `third-party/appimage/dependency-review.json`. No fija digest de Alpine
+ni versiones exactas de musl/zlib/zstd/mimalloc para el binario firmado; no permite
+inferir cierre completo de fuentes/objetos reenlazables. Descargar sólo los dos
+archives declarados no resolvería ese gate.

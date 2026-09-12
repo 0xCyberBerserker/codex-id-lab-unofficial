@@ -51,7 +51,32 @@ def safe_member(member, root):
     target = (root / member).resolve()
     return target == root or root in target.parents
 
-def collect(package, crate):
+def external_notice(package, license_id, manifest_path):
+    manifest_path = Path(manifest_path)
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if data.get("schemaVersion") != 1 or not isinstance(data.get("notices"), list):
+        raise ValueError("invalid external notice inventory")
+    matches = [n for n in data["notices"] if n.get("name") == package["name"] and n.get("version") == package["version"]]
+    if len(matches) != 1:
+        raise ValueError("external notice must match exactly one locked package")
+    notice = matches[0]
+    if notice.get("checksum") != package["checksum"] or notice.get("license") != license_id:
+        raise ValueError("external notice does not match locked checksum/license")
+    source = notice.get("sourceUrl", "")
+    if not re.fullmatch(r"https://raw\.githubusercontent\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/[0-9a-f]{40}/[A-Za-z0-9_./-]+", source):
+        raise ValueError("external notice source must be commit-pinned")
+    filename = notice.get("file", "")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", filename):
+        raise ValueError("unsafe external notice filename")
+    file = manifest_path.parent / filename
+    if file.is_symlink() or not file.is_file() or file.stat().st_size > MAX_TEXT:
+        raise ValueError("unsafe external notice file")
+    text = file.read_bytes()
+    if hashlib.sha256(text).hexdigest() != notice.get("sha256"):
+        raise ValueError("external notice text digest mismatch")
+    return text.decode("utf-8"), {k: notice[k] for k in ("sourceUrl", "sha256")}
+
+def collect(package, crate, external=None):
     if crate.stat().st_size > MAX_CRATE:
         raise ValueError(f"crate exceeds size bound: {crate.name}")
     digest = hashlib.sha256(crate.read_bytes()).hexdigest()
@@ -78,10 +103,22 @@ def collect(package, crate):
             if member.isfile() and LICENSE_NAMES.search(member.name):
                 if member.size > MAX_TEXT: raise ValueError(f"license text exceeds size bound for {crate.name}")
                 texts.append((Path(member.name).name, archive.extractfile(member).read().decode("utf-8")))
+        origin = None
         if not texts:
-            raise ValueError(f"missing license text for {crate.name}")
+            if external is None:
+                raise ValueError(f"missing license text for {crate.name}")
+            text, origin = external_notice(package, license_id, external)
+            vcs = [m for m in members if m.name.count("/") == 1 and m.name.endswith("/.cargo_vcs_info.json")]
+            if len(vcs) != 1:
+                raise ValueError("external notice requires locked crate VCS provenance")
+            commit = json.loads(archive.extractfile(vcs[0]).read())["git"]["sha1"]
+            repository = info.get("repository", "").rstrip("/").removesuffix(".git")
+            prefix = repository.replace("https://github.com/", "https://raw.githubusercontent.com/") + f"/{commit}/"
+            if not origin["sourceUrl"].startswith(prefix):
+                raise ValueError("external notice does not match crate VCS repository/commit")
+            texts.append(("UPSTREAM-LICENSE", text))
     return {"name": package["name"], "version": package["version"], "checksum": digest,
-            "license": license_id, "texts": texts}
+            "license": license_id, "texts": texts, "externalNotice": origin}
 
 def main():
     ap = argparse.ArgumentParser()
@@ -90,13 +127,14 @@ def main():
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--metadata", type=Path, help="cargo metadata JSON for a target-filtered reachable graph")
     ap.add_argument("--target", help="target recorded with --metadata")
+    ap.add_argument("--external-notices", type=Path, help="reviewed commit-pinned local notices for crates missing texts; never downloaded")
     args = ap.parse_args()
     if not args.cache.is_dir(): raise ValueError("cache directory does not exist")
     if args.metadata and not args.target: raise ValueError("--target is required with --metadata")
     if args.output.exists() and any(args.output.iterdir()):
         raise ValueError("refusing non-empty output directory")
     packages = locked_packages(args.lockfile, args.metadata)
-    records = [collect(p, crate_path(args.cache, p)) for p in packages]
+    records = [collect(p, crate_path(args.cache, p), args.external_notices) for p in packages]
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     for record in records:
@@ -104,6 +142,8 @@ def main():
         body = "\n\n".join(f"===== {name} =====\n{text}" for name, text in record["texts"])
         (args.output / filename).write_text(body.rstrip() + "\n", encoding="utf-8")
         manifest.append({k: record[k] for k in ("name", "version", "checksum", "license")})
+        if record["externalNotice"]:
+            manifest[-1]["externalNotice"] = record["externalNotice"]
     manifest_doc = {"target": args.target,
                     "lockSha256": hashlib.sha256(args.lockfile.read_bytes()).hexdigest(),
                     "metadataSha256": hashlib.sha256(args.metadata.read_bytes()).hexdigest() if args.metadata else None,

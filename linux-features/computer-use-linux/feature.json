@@ -25,6 +25,6 @@
       "license": "MIT",
       "imported": true
     },
-    "blockedReason": "Five main-bundle contracts and MIT transport/client tests pass. Native backend is not staged: its 23,783-line desktop implementation and transitive dependencies require separate audit/build/controlled acceptance. Transport fixtures do not prove screenshot, accessibility or input permissions."
+    "blockedReason": "Five main contracts and MIT transport/client fixtures pass; isolated native build, 278 serial Rust tests and 182 target-filtered notices pass. Native staging remains blocked on focused backend security review and positive controlled screenshot/accessibility/input acceptance; unavailable-capability denial is not permission acceptance."
   }
 }

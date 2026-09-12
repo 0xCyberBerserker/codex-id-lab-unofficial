@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+backend="$(realpath "${1:?explicit reviewed backend required}")"
+expected="${2:?explicit SHA-256 required}"
+[[ "$backend" == /tmp/* && -f "$backend" && -x "$backend" && ! -L "$1" && "$expected" =~ ^[0-9a-f]{64}$ ]] || exit 2
+[[ "$(sha256sum "$backend" | awk '{print $1}')" == "$expected" ]] || { echo "computer-use-isolated: backend digest mismatch" >&2; exit 2; }
+for prerequisite in bwrap node timeout; do
+  command -v "$prerequisite" >/dev/null || { echo "computer-use-isolated: NOT_RUN missing $prerequisite" >&2; exit 2; }
+done
+# No host home, network, display, bus or input device is available to this backend.
+timeout -k 5s 20s bwrap --unshare-all --die-with-parent --new-session \
+  --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /tmp --tmpfs /run \
+  --dev /dev --proc /proc --ro-bind "$repo" /tmp/repo --ro-bind "$backend" /tmp/native-helper \
+  --clearenv --setenv PATH /usr/bin --setenv HOME /tmp \
+  --setenv CODEX_LAB_TEST_COMPUTER_USE_BACKEND /tmp/native-helper --setenv CODEX_LAB_TEST_NATIVE_ISOLATED 1 \
+  /usr/bin/node --test /tmp/repo/tests/computer-use-isolated.test.js

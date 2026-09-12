@@ -19,10 +19,29 @@ Missing/null/invalid percentages stay unknown, and a passed reset timestamp does
 not imply replenishment. IDs, real window duration and server reset classification
 are preserved. See the [official App Server contract](https://learn.chatgpt.com/docs/app-server).
 
-This independent provider does **not** observe desktop tasks. The pinned upstream
-shared-socket bridge requires an opt-in ASAR transport patch plus a verified
-WebSocket byte-stream adapter, not the standalone JSON-lines connection used here.
-Task status, approvals, Stop and prompt dispatch therefore remain unavailable.
+By default this independent provider does **not** observe desktop tasks. With the
+experimental shared-authority runtime profile, set
+`CODEX_LAB_SHARED_APP_SERVER_SOCKET=auto` (or an explicit private Unix socket path)
+for the companion. The optional `python-websockets` dependency (15 or newer) provides
+Unix WebSocket framing. Selecting this mode never starts a second App Server and
+never falls back to an independent authority if the bridge is missing or unsafe.
+Its owner and private directory are checked; closing the companion does not stop
+the shared server. A real anonymous bundled CLI test verifies initialization and
+`thread/loaded/list`, without an account or model turn.
+
+The panel shows up to 32 loaded-thread statuses, with a five-second snapshot budget
+and approximately ten-second polling; supported status notifications update it
+between snapshots. `thread/read` requests omit turns; previews, paths and conversation
+content are discarded. This is not proof of observing all desktop tasks: shared
+desktop factory/account acceptance and real nonempty-thread events remain NOT_RUN.
+No resume, subscribe, approval, Stop or prompt dispatch is sent. Incoming sensitive
+requests are denied. Unknown status contracts fail closed. Quota freshness is not
+renewed by task-only updates.
+`CODEX_LAB_TASK_NOTIFICATIONS=1` opts into generic attention notifications, without
+thread IDs/content. They are deduplicated in memory per attention transition,
+survive temporary unavailable snapshots and reset on account change. Extreme
+churn beyond 1024 remembered threads resets deduplication. Default is disabled;
+notifications do not approve actions or claim Wayland focus.
 No conversation is started merely to read quotas.
 
 The approximately 400-logical-pixel panel follows QPalette and supports English,
@@ -77,10 +96,26 @@ con antigüedad y estado stale; cambiar de cuenta lo invalida. Valores ausentes,
 null o inválidos son desconocidos. Pasar la hora de reset no inventa saldo.
 Se conservan IDs, duración real y clasificación del servidor.
 
-El provider independiente **no** observa tareas del desktop. El puente compartido
-upstream necesita un parche ASAR opt-in y un adaptador WebSocket de bytes verificado;
-no usa el framing JSON-lines de esta conexión. Tareas, aprobaciones, Stop y envío
-de prompts siguen indisponibles. Consultar cuotas no inicia una conversación.
+Por defecto el provider independiente **no** observa tareas del desktop. Con el
+perfil experimental de autoridad compartida, configura
+`CODEX_LAB_SHARED_APP_SERVER_SOCKET=auto` o un socket Unix privado explícito.
+Requiere `python-websockets` opcional, versión 15 o posterior. No inicia una segunda
+autoridad ni hace fallback si el socket falta o es inseguro; comprueba propietario
+y directorio privado. Cerrar el companion no detiene el servidor compartido.
+Inicialización y listado real del CLI nativo se han probado sin cuenta ni turno.
+
+El panel muestra hasta 32 estados de hilos cargados: presupuesto de snapshot de
+cinco segundos y polling de unos diez segundos, con notificaciones soportadas
+entre lecturas. Pide resúmenes sin turnos y descarta previews, rutas y contenido.
+No demuestra visibilidad de todas las tareas del desktop: fábrica/cuenta reales
+y eventos de hilos no vacíos siguen NOT_RUN. No envía resume, subscribe,
+aprobaciones, Stop ni prompts; rechaza peticiones sensibles y contratos desconocidos.
+Actualizar tareas no rejuvenece la cuota. Consultar cuotas no inicia conversaciones.
+`CODEX_LAB_TASK_NOTIFICATIONS=1` activa avisos genéricos opcionales, sin IDs ni
+contenido. Se deduplican en memoria por transición, conservando estado frente a
+desconexión y limpiándolo al cambiar de cuenta. Tras más de 1024 hilos recordados
+se reinicia la deduplicación. Por defecto están desactivados; no aprueban acciones
+ni prometen foco Wayland.
 
 El panel de unos 400 píxeles lógicos respeta QPalette y ofrece inglés, español y
 catalán. Es un diálogo Qt compatible, no un flyout Wayland nativo. Sin tray queda

@@ -18,6 +18,29 @@ def package(path):
     return {"name": path.name.rsplit("-", 2)[0], "version": "1.0.0", "checksum": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 class NativeLicenseTests(unittest.TestCase):
+  def test_missing_text_requires_pinned_digest_and_crate_vcs_match(self):
+    root = Path(self._tmpdir.name)
+    source = root / "demo-1.0.0"; source.mkdir()
+    (source / "Cargo.toml").write_text('[package]\nname="demo"\nversion="1.0.0"\nlicense="MIT"\nrepository="https://github.com/example/demo"\n')
+    (source / ".cargo_vcs_info.json").write_text(json.dumps({"git": {"sha1": "a" * 40}}))
+    path = root / "demo-1.0.0.crate"
+    with tarfile.open(path, "w") as archive: archive.add(source, arcname=source.name)
+    locked = package(path)
+    with self.assertRaisesRegex(ValueError, "missing license text"):
+      licenses.collect(locked, path)
+    text = root / "LICENSE.txt"; text.write_text("reviewed original license\n")
+    notice = dict(locked, license="MIT", file="LICENSE.txt", sha256=hashlib.sha256(text.read_bytes()).hexdigest(), sourceUrl=f'https://raw.githubusercontent.com/example/demo/{"a" * 40}/LICENSE')
+    manifest = root / "external.json"
+    manifest.write_text(json.dumps({"schemaVersion": 1, "notices": [notice]}))
+    result = licenses.collect(locked, path, manifest)
+    self.assertEqual(result["texts"][0][1], text.read_text())
+    self.assertEqual(result["externalNotice"]["sha256"], notice["sha256"])
+    for key, value, error in (("checksum", "b" * 64, "checksum/license"), ("sha256", "b" * 64, "digest mismatch"),
+                              ("file", "../LICENSE.txt", "unsafe.*filename"),
+                              ("sourceUrl", f'https://raw.githubusercontent.com/example/demo/{"b" * 40}/LICENSE', "VCS repository/commit")):
+      manifest.write_text(json.dumps({"schemaVersion": 1, "notices": [dict(notice, **{key: value})]}))
+      with self.assertRaisesRegex(ValueError, error): licenses.collect(locked, path, manifest)
+
   def test_target_reachability_and_unknown_registry_fail_closed(self):
     root = Path(self._tmpdir.name)
     lock = root / "Cargo.lock"

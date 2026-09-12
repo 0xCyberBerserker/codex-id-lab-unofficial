@@ -22,7 +22,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from codex_lab_account import AccountCache, AccountClient
+from codex_lab_account import AccountCache, AccountClient, SharedAccountClient, TaskAttention, read_loaded_tasks, task_status
 
 
 APP_NAME = "Codex Lab Tools"
@@ -57,6 +57,10 @@ TEXT = {
         "used": "{value}% used",
         "remaining": "{value}% remaining",
         "tasks_unavailable": "Desktop task status unavailable: no verified bridge",
+        "tasks_snapshot": "Loaded threads: {count} · active: {active} · attention: {attention}",
+        "tasks_partial": "Bounded snapshot; other desktop tasks may not be visible",
+        "tasks_attention_title": "Codex needs your review",
+        "tasks_attention_body": "{count} loaded thread(s) need attention. Review them in the main application.",
         "account_changed": "Account changed; previous quota data was cleared",
         "stale": "Last valid data is stale ({minutes} min old)",
         "resets": "Resets {time}",
@@ -120,6 +124,10 @@ TEXT = {
         "used": "{value}% usado",
         "remaining": "{value}% restante",
         "tasks_unavailable": "Estado de tareas del desktop no disponible: falta un puente verificado",
+        "tasks_snapshot": "Hilos cargados: {count} · activos: {active} · atención: {attention}",
+        "tasks_partial": "Snapshot acotado; otras tareas del escritorio pueden no ser visibles",
+        "tasks_attention_title": "Codex necesita tu revisión",
+        "tasks_attention_body": "{count} hilo(s) cargado(s) necesitan atención. Revísalos en la aplicación principal.",
         "account_changed": "La cuenta ha cambiado; se han descartado sus cuotas anteriores",
         "stale": "Último dato válido obsoleto ({minutes} min de antigüedad)",
         "resets": "Se reinicia el {time}",
@@ -186,6 +194,10 @@ TEXT["ca"] = {
     "used": "{value}% utilitzat",
     "remaining": "{value}% restant",
     "tasks_unavailable": "Estat de les tasques del desktop no disponible: manca un pont verificat",
+    "tasks_snapshot": "Fils carregats: {count} · actius: {active} · atenció: {attention}",
+    "tasks_partial": "Snapshot acotat; altres tasques de l'escriptori poden no ser visibles",
+    "tasks_attention_title": "Codex necessita la teva revisió",
+    "tasks_attention_body": "{count} fil(s) carregat(s) necessiten atenció. Revisa'ls a l'aplicació principal.",
     "account_changed": "El compte ha canviat; s'han descartat les quotes anteriors",
     "stale": "Última dada vàlida obsoleta ({minutes} min d'antiguitat)",
     "resets": "Es reinicia el {time}",
@@ -271,19 +283,31 @@ def codex_command() -> list[str]:
     return command
 
 
+def account_client(cancelled: Callable[[], bool] | None = None) -> AccountClient:
+    selected = os.environ.get("CODEX_LAB_SHARED_APP_SERVER_SOCKET")
+    if selected:
+        if selected == "auto":
+            root = os.environ.get("XDG_RUNTIME_DIR", "")
+            if not root or not Path(root).is_absolute():
+                raise RuntimeError("Shared bridge requires an absolute XDG_RUNTIME_DIR")
+            selected = str(Path(root) / "codex-id-lab-unofficial/app-server-bridge/app-server.sock")
+        return SharedAccountClient(selected, cancelled)
+    return AccountClient(codex_command() + ["-s", "read-only", "-a", "on-request", "app-server", "--stdio"], cancelled)
+
+
+def tasks_text(tasks: dict[str, Any]) -> str:
+    if tasks.get("status") != "loaded-thread-snapshot":
+        return tr("tasks_unavailable")
+    items = tasks.get("items", [])
+    return tr("tasks_snapshot", count=len(items), active=sum(item["type"] == "active" for item in items),
+              attention=sum(item["needs_attention"] for item in items)) + "\n" + tr("tasks_partial")
+
+
 def query_codex_account(
     timeout: float = 12.0,
     cancelled: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
-    command = codex_command() + [
-        "-s",
-        "read-only",
-        "-a",
-        "on-request",
-        "app-server",
-        "--stdio",
-    ]
-    client = AccountClient(command, cancelled)
+    client = account_client(cancelled)
     generation = [0]
     def notification(method: str, params: dict[str, Any]) -> None:
         if method == "account/updated":
@@ -563,24 +587,24 @@ def run_gui(command: str) -> int:
             self.refresh_event.set()
 
         def run(self) -> None:
-            try:
-                command_line = codex_command() + ["-s", "read-only", "-a", "on-request", "app-server", "--stdio"]
-            except Exception as error:
-                self.failed.emit(str(error))
-                return
             backoff = 1.0
             while not self.isInterruptionRequested():
-                client = AccountClient(
-                    command_line,
-                    self.isInterruptionRequested,
-                )
-                state: dict[str, Any] = {"usage": {}, "limits": None, "generation": 0, "signature": None, "usage_status": "unavailable"}
+                try:
+                    client = account_client(self.isInterruptionRequested)
+                except Exception as error:
+                    self.failed.emit(str(error))
+                    return
+                state: dict[str, Any] = {"usage": {}, "limits": None, "quota_updated_at": None, "tasks": None, "generation": 0, "signature": None, "usage_status": "unavailable"}
 
                 def publish(force: bool = False) -> None:
-                    if state["limits"] is None:
+                    if state["limits"] is None and state["tasks"] is None:
                         return
-                    data = normalize_account_data(state["usage"], state["limits"])
+                    data = normalize_account_data(state["usage"], state["limits"] or {})
                     data["usage_status"] = state["usage_status"]
+                    data["quota_status"] = "available" if state["limits"] is not None else "unavailable"
+                    data["updated_at"] = state["quota_updated_at"] or time.time()
+                    if state["tasks"] is not None:
+                        data["tasks"] = state["tasks"]
                     signature = account_snapshot_signature(data)
                     if force or signature != state["signature"]:
                         state["signature"] = signature
@@ -588,19 +612,38 @@ def run_gui(command: str) -> int:
 
                 def notification(method: str, params: dict[str, Any]) -> None:
                     if method == "account/updated":
-                        state.update(usage={}, limits=None, signature=None, usage_status="unavailable")
+                        state.update(usage={}, limits=None, quota_updated_at=None, tasks=None, signature=None, usage_status="unavailable")
                         state["generation"] += 1
                         self.account_invalidated.emit()
                         self.refresh_event.set()
-                    else:
+                    elif method == "account/rateLimits/updated":
                         state["limits"] = params
+                        state["quota_updated_at"] = time.time()
                         publish()
+                    elif method == "thread/status/changed" and state["tasks"] is not None:
+                        for item in state["tasks"]["items"]:
+                            if item["id"] == params.get("threadId"):
+                                try:
+                                    item.update(task_status(params.get("status")))
+                                except RuntimeError:
+                                    state["tasks"] = None
+                                    self.refresh_event.set()
+                                publish()
+                                break
 
                 client.notification = notification
                 try:
                     client.start()
                     next_refresh = time.monotonic()
+                    next_tasks = time.monotonic()
                     while not self.isInterruptionRequested():
+                        if isinstance(client, SharedAccountClient) and time.monotonic() >= next_tasks:
+                            try:
+                                state["tasks"] = read_loaded_tasks(client)
+                            except RuntimeError:
+                                state["tasks"] = None
+                            publish()
+                            next_tasks = time.monotonic() + 10 * random.uniform(0.9, 1.1)
                         if self.refresh_event.is_set() or time.monotonic() >= next_refresh:
                             self.refresh_event.clear()
                             generation = state["generation"]
@@ -609,6 +652,7 @@ def run_gui(command: str) -> int:
                                 self.refresh_event.set()
                                 continue
                             state["limits"] = limits
+                            state["quota_updated_at"] = time.time()
                             publish(force=True)
                             backoff = 1.0
                             try:
@@ -778,7 +822,9 @@ def run_gui(command: str) -> int:
 
         def set_data(self, data: dict[str, Any]) -> None:
             self.refresh_button.setEnabled(True)
-            self.status.setText(tr("updated", time=datetime.now().strftime("%H:%M")))
+            self.status.setText(tr("unknown") if data.get("quota_status") == "unavailable" else
+                                tr("updated", time=datetime.fromtimestamp(data["updated_at"]).strftime("%H:%M")))
+            self.tasks_status.setText(tasks_text(data.get("tasks", {})))
             while self.limits_layout.count():
                 item = self.limits_layout.takeAt(0)
                 if item.widget():
@@ -839,6 +885,7 @@ def run_gui(command: str) -> int:
             self.dialog.refresh_requested.connect(self.refresh)
             self.worker: UsageWorker | None = None
             self.cache = AccountCache()
+            self.task_attention = TaskAttention()
             self.last_report: Path | None = None
             self.notification_opens_report = False
 
@@ -988,8 +1035,15 @@ def run_gui(command: str) -> int:
             self.worker.start()
 
         def set_data(self, data: dict[str, Any]) -> None:
-            self.cache.update(data)
+            age = max(0, time.time() - data["updated_at"])
+            self.cache.update(data, now=time.monotonic() - age)
+            if data.get("quota_status") == "unavailable":
+                self.cache.failed()
             self.dialog.set_data(data)
+            needed = self.task_attention.update(data.get("tasks", {}))
+            if needed and self.tray_available and os.environ.get("CODEX_LAB_TASK_NOTIFICATIONS") == "1":
+                self.notification_opens_report = False
+                self.tray.showMessage(tr("tasks_attention_title"), tr("tasks_attention_body", count=needed), QSystemTrayIcon.Information)
 
         def set_error(self, message: str) -> None:
             self.cache.failed()
@@ -1000,6 +1054,7 @@ def run_gui(command: str) -> int:
 
         def invalidate_account(self) -> None:
             self.cache.account_changed()
+            self.task_attention = TaskAttention()
             self.dialog.set_data(normalize_account_data({}, {}))
             self.dialog.status.setText(tr("account_changed"))
 
