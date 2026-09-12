@@ -67,12 +67,13 @@ need cmp
 need cp
 need rm
 need date
+need install
 
 sync_desktop_entry() {
   local system_dir="${CODEX_LAB_SYSTEM_APPLICATIONS_DIR:-${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}}"
   local user_dir="${CODEX_LAB_USER_APPLICATIONS_DIR:-${CODEXUI_USER_APPLICATIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/applications}}"
   local entry system_entry user_entry
-  local backup
+  local backup desktop_dir desktop_entry shortcut
 
   for entry in codex-lab.desktop codex-lab-tools.desktop; do
     system_entry="$system_dir/$entry"
@@ -107,6 +108,36 @@ sync_desktop_entry() {
       cp -p -- "$user_entry" "$backup"
       rm -f -- "$user_entry"
       echo "$PROGRAM: preserved and removed legacy desktop override: $entry"
+    fi
+  done
+
+  desktop_dir="${CODEX_LAB_DESKTOP_DIR:-}"
+  if [[ -z "$desktop_dir" ]]; then
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+      desktop_dir="$(xdg-user-dir DESKTOP)"
+    else
+      desktop_dir="$HOME/Desktop"
+    fi
+  fi
+  desktop_entry="$system_dir/codex-lab.desktop"
+  shortcut="$desktop_dir/Codex I+D Lab - Unofficial.desktop"
+  install -d -m 755 "$desktop_dir"
+  if [[ -e "$shortcut" || -L "$shortcut" ]]; then
+    if ! cmp -s -- "$desktop_entry" "$shortcut"; then
+      backup="$shortcut.bak-codex-lab-install-$(date +%Y%m%d-%H%M%S)"
+      cp -p -- "$shortcut" "$backup"
+      echo "$PROGRAM: preserved desktop shortcut as $backup"
+    fi
+  fi
+  install -m 755 "$desktop_entry" "$shortcut"
+
+  for entry in "Codex UI Linux Port.desktop" "Codex UI Tools.desktop"; do
+    user_entry="$desktop_dir/$entry"
+    if [[ -e "$user_entry" || -L "$user_entry" ]]; then
+      backup="$user_entry.bak-codex-lab-migration-$(date +%Y%m%d-%H%M%S)"
+      cp -p -- "$user_entry" "$backup"
+      rm -f -- "$user_entry"
+      echo "$PROGRAM: preserved and removed legacy desktop shortcut: $entry"
     fi
   done
 

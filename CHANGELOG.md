@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Discord Rich Presence activities are now selected randomly without immediate repetition.
 - Standardized the updater command as `codex-lab-install`; `codex-lab-update` remains available as a compatibility alias with identical flags.
 - Renamed the project to Codex I+D Lab - Unofficial and standardized public commands under `codex-lab*`; former command names remain temporary migration aliases.
+- The installer now refreshes the application-menu entry and desktop shortcut while preserving customized legacy launchers.
 
 ### Fixed
 
@@ -52,6 +53,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) y los 
 - Las actividades de Discord Rich Presence ahora se eligen aleatoriamente sin repetición inmediata.
 - Estandarizado el comando como `codex-lab-install`; `codex-lab-update` permanece como alias compatible con los mismos flags.
 - Renombrado el proyecto a Codex I+D Lab - Unofficial y estandarizados los comandos públicos bajo `codex-lab*`; los nombres anteriores quedan como alias temporales de migración.
+- El instalador actualiza la entrada del menú de aplicaciones y el acceso directo del escritorio, conservando los lanzadores antiguos personalizados.
 
 ### Corregido
 

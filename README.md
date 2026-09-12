@@ -70,7 +70,7 @@ Fresh install, update, or migration from the former project name:
 bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
 ```
 
-After installation:
+After installation, the command also refreshes the application-menu entry and desktop shortcut:
 
 ```bash
 codex-lab-install

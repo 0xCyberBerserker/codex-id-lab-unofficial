@@ -12,7 +12,7 @@ Fresh install, update, or migration from the former project name:
 bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
 ```
 
-After installation:
+After installation, the command also refreshes the application-menu entry and desktop shortcut:
 
 ```bash
 codex-lab-install
@@ -76,7 +76,7 @@ Instalación desde cero, actualización o migración desde el nombre anterior:
 bash <(curl -fsSL https://raw.githubusercontent.com/0xCyberBerserker/codex-id-lab-unofficial/main/scripts/codex-lab-install)
 ```
 
-Después de instalar:
+Después de instalar, el comando también actualiza la entrada del menú de aplicaciones y el acceso directo del escritorio:
 
 ```bash
 codex-lab-install
