@@ -41,6 +41,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bubblewrap cpio desktop-file-utils jq curl dpkg-dev rpm zstd libarchive-tools ripgrep gnupg xvfb xdotool
 
+      - name: Set up pinned ASAR test runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.8.1'
+          package-manager-cache: false
+
+      - name: Prepare audited ASAR development dependencies
+        working-directory: tools/asar-builder
+        run: |
+          npm ci --ignore-scripts --no-fund
+          npm audit --audit-level=low
+
       - name: Test companion core
         run: |
           python3 -m unittest discover -s tests -v
