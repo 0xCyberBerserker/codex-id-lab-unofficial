@@ -1,0 +1,68 @@
+name: Validate Codex I+D Lab
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up pinned ASAR test runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.8.1'
+          package-manager-cache: false
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap cpio dbus desktop-file-utils dpkg-dev gnupg jq libarchive-tools ripgrep rpm shellcheck zstd
+
+      - name: Prepare audited ASAR development dependencies
+        working-directory: tools/asar-builder
+        run: |
+          npm ci --ignore-scripts --no-fund
+          npm audit --audit-level=low
+
+      - name: Check native portal helper without desktop access
+        run: |
+          TASK_CARGO_CACHE=$(mktemp -d /tmp/codex-lab-cargo.XXXXXX)
+          CARGO_HOME="$TASK_CARGO_CACHE" cargo fetch --locked --manifest-path tools/global-dictation/Cargo.toml
+          python3 tools/global-dictation/audit-dependencies.py --query-osv
+          tools/global-dictation/test-isolated "$TASK_CARGO_CACHE"
+
+      - name: Validate scripts
+        run: |
+          for script in scripts/*; do
+            [[ -f "$script" ]] || continue
+            IFS= read -r shebang < "$script"
+            [[ "$shebang" == '#!/usr/bin/env bash' ]] || continue
+            bash -n "$script"
+          done
+          shellcheck \
+            scripts/build-from-linux \
+            scripts/build-packages \
+            scripts/build-recipe-sha \
+            scripts/codex-lab-install \
+            scripts/resolve-linux-source \
+            scripts/update-aur-metadata \
+            scripts/validate-package \
+            scripts/validate-release-artifacts
+          shellcheck tools/global-dictation/test-isolated scripts/smoke-linux-candidate
+
+      - name: Run unit and package tests
+        run: |
+          python3 -m unittest discover -s tests -v
+          node --test scripts/lib/linux-features.test.js tests/lab-features.test.js tests/runtime-features.test.js tests/global-dictation.test.js linux-features/computer-use-linux/native.test.js
+
+      - name: Enforce repository privacy boundary
+        run: scripts/privacy-audit

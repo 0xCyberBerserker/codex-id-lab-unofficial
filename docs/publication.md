@@ -32,14 +32,18 @@ Avoid maintainer-specific language such as personal workstation details, private
 
 ## Release Asset Policy
 
-GitHub Actions is the only authoritative release builder. It always downloads the current upstream source archive, compares its SHA256 against the release manifest, rebuilds packages when needed, validates all artifacts, and runs the privacy audit.
+GitHub Actions is the only authoritative release builder. It verifies the source, builds `$UPSTREAM_VERSION-$REVISION`, validates all artifacts, creates provenance attestations, and promotes a complete draft. Published tags and assets are not replaced.
+
+Promotion is disabled by default. It requires the repository variable `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true` after the maintainer has approved the GitHub Actions identity and completed a controlled attestation test.
+
+The authenticated external manifest binds the final package names, formats, architectures, sizes, and SHA-256 digests. Package-embedded manifests bind the same build identity and prepared payload without attempting to hash their own package.
 
 Release assets must include:
 
-- `chatgpt_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-id-lab-unofficial_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
+- `chatgpt_$UPSTREAM_VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$UPSTREAM_VERSION-$REVISION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 
@@ -55,6 +59,12 @@ Repository-authored automation, Linux patches, packaging metadata, website mater
 
 Este repositorio contiene automatización pública y no oficial para empaquetar Codex UI en Linux. Los assets son públicos; AUR está preparado, pero no publicado. GitHub Actions es el único builder autoritativo.
 
+Las releases usan `$UPSTREAM_VERSION-$REVISION`. El workflow valida el conjunto completo, genera attestations y promociona un draft; no sustituye tags ni assets ya publicados.
+
+La promoción está desactivada por defecto. Requiere la variable de repositorio `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true` después de aprobar la identidad de GitHub Actions y completar una prueba controlada de attestations.
+
+El manifiesto externo autenticado vincula nombres, formatos, arquitecturas, tamaños y SHA-256 finales. Los manifiestos embebidos conservan la misma identidad y el hash del payload preparado sin intentar calcular el hash del paquete que los contiene.
+
 ## Salvaguardas
 
 1. Revisa las condiciones upstream de redistribución y marcas.
@@ -66,10 +76,10 @@ Este repositorio contiene automatización pública y no oficial para empaquetar 
 
 ## Assets requeridos
 
-- `chatgpt_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-id-lab-unofficial_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
+- `chatgpt_$UPSTREAM_VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$UPSTREAM_VERSION-$REVISION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 

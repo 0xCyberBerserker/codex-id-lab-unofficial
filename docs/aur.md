@@ -8,7 +8,13 @@ Package name:
 codex-id-lab-unofficial-bin
 ```
 
-The AUR package is not published yet.
+The AUR package is not published yet. The helper requires a validated archive,
+checks its identity and embeds its checksum. AUR `prepare()` verifies the approved
+main-workflow build attestation before packaging. A local candidate checksum may
+be prepared with `CODEX_LAB_AUR_LOCAL_CANDIDATE=1`, but it is not a published/attested
+release and cannot pass that gate. Regenerate against the authenticated final
+release archive before publication. AUR output metadata does not enter the binary
+build fingerprint, avoiding a final-checksum self-reference.
 
 Before AUR publication:
 
@@ -19,7 +25,7 @@ Before AUR publication:
 5. Run:
 
 ```bash
-scripts/update-aur-metadata
+scripts/update-aur-metadata UPSTREAM_VERSION REVISION VERIFIED_ARCH_ARCHIVE
 ```
 
 6. Regenerate `.SRCINFO`.
@@ -41,6 +47,13 @@ Antes de publicarlo:
 2. Confirma que los assets pueden ser públicos.
 3. Verifica URLs y checksums.
 4. Revisa `docs/publication.md`.
-5. Ejecuta `scripts/update-aur-metadata`.
+5. Ejecuta `scripts/update-aur-metadata VERSION_UPSTREAM REVISION ARCHIVO_ARCH_VERIFICADO`.
 6. Regenera `.SRCINFO`.
 7. Compila localmente con `makepkg -sf`.
+
+El helper exige un archivo real validado, comprueba identidad y fija su checksum.
+No se publica con `SKIP`. `prepare()` verifica la attestation del workflow principal
+aprobado antes de empaquetar. `CODEX_LAB_AUR_LOCAL_CANDIDATE=1` permite preparar el
+checksum local, pero su archivo no está publicado ni atestado y no pasa ese gate.
+Regenera contra el archivo final autenticado antes de publicar. La metadata AUR de
+salida no entra en la huella del build binario, evitando autorreferencias.

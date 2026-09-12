@@ -19,7 +19,7 @@ Security reports must follow the private process in the repository root [SECURIT
 
 ## Build Source Verification
 
-The release workflow pins the official repository-key fingerprint and verifies `InRelease`, the package index, and the source package SHA-256 and size. The signing key is bootstrapped from the official HTTPS package, so HTTPS remains part of the initial trust boundary.
+The release workflow stores the approved public key in the repository, rejects additional primary keys, accepts only its legitimate signing subkeys, and verifies the authenticated package index before downloading its concrete `Filename`. Published manifests, checksums, and packages must also carry GitHub build-provenance attestations from the main-branch release workflow.
 
 ## Release Boundary
 
@@ -39,7 +39,7 @@ Este repositorio no debe contener usuarios o rutas locales, chats, perfiles, ses
 
 ## Verificación de la fuente
 
-El workflow fija la huella de la clave del repositorio oficial y verifica `InRelease`, el índice, el SHA-256 y el tamaño del paquete. La clave se obtiene inicialmente desde el paquete oficial servido por HTTPS, por lo que HTTPS forma parte del límite de confianza inicial.
+El workflow almacena la clave pública aprobada en el repositorio, rechaza claves primarias adicionales, acepta sólo sus subclaves de firma legítimas y verifica el índice autenticado antes de descargar su `Filename` concreto. Los manifiestos, checksums y paquetes publicados también deben incluir attestations de procedencia del workflow de release en la rama principal.
 
 ## Límite de publicación
 

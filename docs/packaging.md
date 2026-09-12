@@ -20,6 +20,7 @@ Runtime dependencies:
 - Node.js
 - curl
 - jq
+- GitHub CLI (`gh`) for build-attestation verification
 - desktop-file-utils
 - PySide6
 - Spectacle
@@ -36,18 +37,20 @@ GitHub Actions is the authoritative builder for release artifacts. Generated rel
 
 A release run must generate and validate:
 
-- `chatgpt_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-id-lab-unofficial_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
+- `chatgpt_$UPSTREAM_VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$UPSTREAM_VERSION-$REVISION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 
-The workflow verifies the pinned OpenAI repository-key fingerprint, the signed `InRelease` metadata, the package-index hash, and the Linux DEB hash and size. If a release for the same version exists, it also verifies every asset listed in `checksums.txt`. Any source, recipe, or artifact mismatch rebuilds the packages and refreshes release assets with `--clobber`.
+The workflow verifies the pinned repository key, signed `InRelease`, package-index hash, and selected Linux DEB. Package identities use `$UPSTREAM_VERSION-$REVISION`; published tags and assets are immutable. A complete draft is attested and only then promoted.
 
-`manifest.json` records the upstream source URL, source archive filename, SHA256, package version, and UTC generation timestamp.
+The manifest embedded in each package records upstream and package versions separately, packaging revision, architecture, build and feature profiles, commit, recipe hash, prepared-payload hash, source hash, and UTC generation timestamp. The external `manifest.json` adds the final package hashes and sizes; the embedded copy intentionally has no self-hash.
 
-The workflow fails before release creation or refresh if any required package is missing, empty, has an unexpected name, has a stale source archive hash, or fails checksum validation.
+The workflow fails before draft promotion if any required package is missing, empty, has an unexpected name, has a stale source archive hash, or fails checksum validation.
+
+Release promotion additionally requires `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true`; it remains blocked until the signing identity has been accepted through a controlled live test.
 
 Local package builds remain supported for bootstrap, debugging, and smoke testing. They are not the source of truth for future releases.
 
@@ -75,6 +78,7 @@ Dependencias de ejecución:
 - Node.js
 - curl
 - jq
+- GitHub CLI (`gh`) para verificar attestations de build
 - desktop-file-utils
 - PySide6
 - Spectacle
@@ -87,6 +91,10 @@ Los paquetes generados usan metadatos de licencia `Custom` porque agregan materi
 
 ## Autoridad del build de release
 
-GitHub Actions es el builder autoritativo de los artefactos publicados. Cada ejecución valida la huella de la clave, el índice firmado, el SHA-256 del DEB oficial, el manifiesto, los nombres y la integridad de todos los paquetes antes de crear o actualizar una release.
+GitHub Actions es el builder autoritativo. La identidad usa `$UPSTREAM_VERSION-$REVISION`; cada formato conserva su revisión nativa. Los assets publicados son inmutables: el workflow crea un draft completo, genera attestations y sólo entonces lo promociona.
+
+El manifiesto embebido registra por separado versión upstream, revisión de empaquetado, arquitectura, perfiles de build y funciones, commit, receta, payload preparado y paquete fuente. El `manifest.json` externo añade hashes y tamaños finales; la copia embebida no contiene autorreferencias.
 
 Los builds locales sirven para bootstrap, depuración y smoke tests; no son la fuente de verdad de releases futuras.
+
+La promoción requiere además `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true`; permanece bloqueada hasta aceptar la identidad de firma mediante una prueba controlada en vivo.
