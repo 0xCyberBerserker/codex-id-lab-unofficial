@@ -61,6 +61,10 @@ jobs:
             exit 0
           fi
           echo "exists=true" >> "$GITHUB_OUTPUT"
+          if [ "${FORCE_REBUILD:-false}" = "true" ]; then
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           rm -rf existing-release
           mkdir -p existing-release
           if gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern manifest.json --dir existing-release >/dev/null 2>&1; then
@@ -94,9 +98,7 @@ jobs:
             fi
           fi
 
-          if [ "${FORCE_REBUILD:-false}" = "true" ]; then
-            echo "fresh=false" >> "$GITHUB_OUTPUT"
-          elif [ "$existing_sha" = "$source_sha" ] && [ "$existing_build_recipe_sha" = "$build_recipe_sha" ] && [ "$asset_set_complete" = "true" ]; then
+          if [ "$existing_sha" = "$source_sha" ] && [ "$existing_build_recipe_sha" = "$build_recipe_sha" ] && [ "$asset_set_complete" = "true" ]; then
             echo "fresh=true" >> "$GITHUB_OUTPUT"
           else
             echo "fresh=false" >> "$GITHUB_OUTPUT"
