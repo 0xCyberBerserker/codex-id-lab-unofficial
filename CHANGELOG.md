@@ -47,6 +47,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Added
 
+- Anonymous offline native-media probe with synthetic audio, private debugging pipe, settings-filter/MediaRecorder checks and CI-discovered transport regressions; actual microphone/transcription remain unverified.
+- Explicit pinned-ASAR dictation adapter regression that validates syntax without executing upstream code or modifying the installed archive.
 - Optional shared-authority companion transport with private Unix WebSocket framing, metadata-only loaded-thread snapshots, bounded polling and explicit sensitive-request denial.
 - Opt-in private Unix shared authority transport with ordered configuration, owned cleanup, native CLI upgrade tests and reversible ASAR staging.
 - Target-filtered Cargo license inventory for 74 reachable Linux dependencies; dictation candidates preserve and diagnose notices alongside the helper.
@@ -130,6 +132,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 
 ### Añadido
 
+- Prueba multimedia nativa anónima y offline con audio sintético, pipe privado, filtro del selector/MediaRecorder y regresiones de transporte descubiertas por CI; micrófono y transcripción reales siguen sin verificar.
+- Regresión del adaptador de dictado contra ASAR fijado explícito, validando sintaxis sin ejecutar código upstream ni modificar el archivo instalado.
 - Transporte opcional del companion hacia la misma autoridad, WebSocket Unix privado, snapshots de hilos sin conversaciones, polling acotado y rechazo de peticiones sensibles.
 - Transporte Unix privado opt-in de autoridad compartida, con configuración ordenada, limpieza propia, prueba nativa y staging ASAR reversible.
 - Inventario de licencias de las 74 dependencias Linux alcanzables; los candidatos de dictado adjuntan avisos y detectan su manipulación.

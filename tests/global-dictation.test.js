@@ -27,6 +27,25 @@ function mainBundleFixture() {
   ].join("");
 }
 
+test("pinned native ASAR accepts the dictation adapter without executing upstream code", {skip: !process.env.CODEX_LAB_TEST_DICTATION_ASAR}, async () => {
+  const archive = process.env.CODEX_LAB_TEST_DICTATION_ASAR;
+  const compatibility = require("../linux-features/global-dictation/feature.json").lab.compatibility.asarSha256;
+  const digest = crypto.createHash("sha256").update(fs.readFileSync(archive)).digest("hex");
+  assert.ok(compatibility.includes(digest), "ASAR must match the reviewed compatibility identity");
+  const asar = await import(pathToFileURL(path.join(__dirname, "../tools/asar-builder/node_modules/@electron/asar/lib/asar.js")));
+  const names = asar.listPackage(archive).map(name => name.replace(/^\//, "")).filter(name => /^\.vite\/build\/main-[^/]+\.js$/.test(name));
+  assert.equal(names.length, 1);
+  const name = names[0];
+  const original = asar.extractFile(archive, name).toString("utf8");
+  const files = {[name]: original};
+  assert.deepEqual(patchSources({...files}, []), []);
+  const changes = patchSources(files, ["global-dictation"]);
+  assert.equal(changes.length, 1);
+  assert.notEqual(files[name], original);
+  assert.doesNotThrow(() => new vm.Script(files[name]));
+  assert.equal(crypto.createHash("sha256").update(fs.readFileSync(archive)).digest("hex"), digest);
+});
+
 
 function context(child, session = "wayland") {
   let spawned = 0;

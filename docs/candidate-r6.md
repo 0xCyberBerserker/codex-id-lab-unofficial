@@ -116,6 +116,43 @@ A disposable copy of the installed runtime passed actual anonymous software-X11
 window startup with home/network isolated and Chromium sandbox retained. No host
 account/profile, microphone, playback or authenticated voice functionality was tested.
 
+### Native media follow-up
+
+The installed revision 6 passed `tests/native_media_probe.py` on 2026-09-12:
+secure application context, three labeled synthetic audio inputs, two inputs
+accepted by the actual settings filter before/after capture, one audio track,
+zero video tracks, and a non-empty MediaRecorder recording. The probe uses
+Chromium fake devices and a private debugging pipe in an anonymous offline
+namespace without `/dev/snd`, personal homes or desktop sockets. It does not
+override permission handlers or use fake permission approval. No recording is
+saved and no actual microphone/account/backend is used.
+
+Reproduce with the verified installed path and ASAR digest:
+
+```bash
+python3 tests/native_media_probe.py /opt/codex-id-lab-unofficial \
+  6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3
+CODEX_LAB_TEST_DICTATION_ASAR=/opt/codex-id-lab-unofficial/resources/app.asar \
+  node --test tests/global-dictation.test.js
+```
+
+The latter also checks the opt-in Wayland adapter against this actual pinned
+ASAR, validates syntax without executing upstream code, and leaves the archive
+unchanged. Native global hold/release is unsupported in the unmodified Linux
+bundle; the experimental portal adapter remains disabled in the installed base.
+The restrictive clipboard permission handler belongs to the integrated browser,
+not the main UI; it was not widened. Composer dictation additionally depends on
+the server feature and ChatGPT authentication, neither of which this test grants.
+Actual hardware audio, transcription and voice playback are still NOT_RUN.
+
+Three transport regressions pass and are automatically discovered by existing
+read-only push/PR CI. The actual-ASAR case requires an explicit reviewed fixture;
+the synthetic runtime probe is a local/manual check, not a remote Actions result.
+Evidence: `build/qa/native-media-probe-r3.log` and
+`build/qa/native-dictation-contract.log`. The first probe failed on pipe descriptor
+inheritance; the harness was corrected without changing runtime permissions.
+Tests/docs do not change revision 6's build recipe or installed payload.
+
 ### Remaining gates
 
 Phase 1 engineering and phase 3 framework/package work have local evidence.
@@ -141,6 +178,24 @@ payload, manifiesto y hashes indicados arriba. Origen APT firmado reverificado;
 nuestro builder sigue sin attestation ni promoción. No es una release publicada,
 aunque el perfil de receta se llame `release`. Se conservan los candidatos
 anteriores y el AppImage 2; no se declara AppImage 6.
+
+La prueba multimedia del runtime instalado pasa con audio sintético: contexto
+seguro, tres entradas etiquetadas, dos aceptadas por el selector antes/después
+de capturar, una pista de audio, ninguna de vídeo y grabación MediaRecorder no
+vacía. Usa dispositivos falsos de Chromium, pipe privado y namespace anónimo sin
+red, `/dev/snd`, homes personales ni sockets del escritorio. No amplía permisos,
+guarda audio ni utiliza micrófono, cuenta o backend reales. Los comandos anteriores
+permiten repetirla. Tres regresiones del transporte entran automáticamente en el
+CI push/PR existente; no se han ejecutado Actions remotas.
+
+El adaptador Wayland también acepta el ASAR real fijado y conserva su archivo
+intacto; sólo se compila su sintaxis, sin ejecutar código upstream. El dictado
+global al mantener/liberar el atajo no está soportado por la base Linux sin
+parches; el adaptador experimental sigue deshabilitado. El handler restrictivo
+de portapapeles pertenece al navegador integrado y se conserva: ampliarlo no
+arreglaría la UI principal. Dictado del composer depende además del flag servidor
+y autenticación ChatGPT. Audio físico, transcripción y reproducción siguen NOT_RUN.
+Tests y documentación no cambian la receta ni el payload instalado de revisión 6.
 
 Se implementó recuperación del candidato exacto autenticado, sin borrar locks ni
 reparar/restaurar el host. El companion puede compartir una autoridad Unix opt-in,
