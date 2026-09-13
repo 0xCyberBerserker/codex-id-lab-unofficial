@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+backend="$(realpath "${1:?explicit reviewed backend required}")"
+expected="${2:?explicit SHA-256 required}"
+[[ "$backend" == /tmp/* && -f "$backend" && -x "$backend" && ! -L "$1" && "$expected" =~ ^[0-9a-f]{64}$ ]] || exit 2
+[[ "$(sha256sum "$backend" | awk '{print $1}')" == "$expected" ]] || { echo 'accessibility-test: backend digest mismatch' >&2; exit 2; }
+for prerequisite in bwrap node python3 Xvfb dbus-daemon timeout; do
+  command -v "$prerequisite" >/dev/null || { echo "accessibility-test: NOT_RUN missing $prerequisite" >&2; exit 2; }
+done
+[[ -x /usr/lib/at-spi-bus-launcher && -x /usr/lib/at-spi2-registryd ]] || { echo 'accessibility-test: NOT_RUN missing AT-SPI' >&2; exit 2; }
+# All display/accessibility processes belong to this disposable namespace.
+# Variables in the quoted program belong to the inner namespace shell.
+# shellcheck disable=SC2016
+timeout -k 5s 55s bwrap --unshare-all --die-with-parent --new-session \
+  --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /tmp --tmpfs /run \
+  --dev /dev --proc /proc --ro-bind "$repo" /tmp/repo --ro-bind "$backend" /tmp/native-helper \
+  --clearenv --setenv PATH /usr/bin:/bin --setenv HOME /tmp/home \
+  --setenv XDG_CONFIG_HOME /tmp/config --setenv XDG_CACHE_HOME /tmp/cache \
+  --setenv XDG_DATA_HOME /tmp/data --setenv XDG_RUNTIME_DIR /tmp/runtime \
+  --setenv DISPLAY :99 --setenv QT_QPA_PLATFORM xcb --setenv LANG C.UTF-8 \
+  --setenv QT_LINUX_ACCESSIBILITY_ALWAYS_ON 1 --setenv QT_ACCESSIBILITY 1 \
+  --setenv DBUS_SESSION_BUS_ADDRESS unix:path=/tmp/lab-session-bus \
+  --setenv CODEX_LAB_TEST_ACCESSIBILITY_BACKEND /tmp/native-helper \
+  --setenv CODEX_LAB_TEST_NATIVE_ISOLATED 1 \
+  /usr/bin/bash -euo pipefail -c '
+    mkdir -m 700 /tmp/home /tmp/config /tmp/cache /tmp/data /tmp/runtime
+    Xvfb :99 -screen 0 1024x768x24 -nolisten tcp -extension GLX >/tmp/display.log 2>&1 &
+    display_pid=$!
+    trap "kill $display_pid 2>/dev/null || true" EXIT
+    dbus-daemon --session --fork --address=unix:path=/tmp/lab-session-bus
+    for attempt in {1..30}; do
+      [[ -S /tmp/.X11-unix/X99 ]] && break
+      kill -0 "$display_pid"
+      sleep 0.1
+    done
+    [[ -S /tmp/.X11-unix/X99 ]]
+    node --test /tmp/repo/tests/computer-use-accessibility.test.js
+  '

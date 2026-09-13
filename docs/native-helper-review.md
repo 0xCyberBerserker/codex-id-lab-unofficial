@@ -57,6 +57,31 @@ does not sandbox the backend automatically or grant desktop/input consent. Brows
 host, setup and unrestricted desktop tools remain excluded. A sandbox-preserving
 positive capability/permission harness is still required before activation.
 
+On 2026-09-13, `tests/test-computer-use-accessibility BINARY SHA256` passed three
+positive native CLI cases against real Qt/AT-SPI in English/Spanish/Catalan.
+The wrapper verifies the reviewed binary digest before creating an offline
+bubblewrap namespace with personal homes/runtime/input devices masked. Xvfb and
+the session/accessibility D-Bus are private; no host service is enabled. Tests
+discover exactly the fixture's PID and read its named editable field, text,
+untruncated content, nonzero bounds and focus states. Qt uses the system palette.
+CI checks the harness and records explicit skips when this native fixture is
+not supplied; no remote Actions run is claimed.
+
+This is **CLI accessibility acceptance only**, not positive MCP desktop control.
+The CLI `apps` uses AT-SPI directly; CLI `state APP_NAME` has no PID argument, so
+the test verifies the discovered PID/unique app before filtering the snapshot by
+name. MCP `get_app_state` and input first resolve/focus a window target. The generic
+X11 window backend requires wmctrl, absent on this host; Xvfb/AT-SPI alone do not
+provide a working capture/input portal. No fake window inventory or permission
+approval is substituted. Targeted MCP state, screenshot, input and actual portal
+consent remain BLOCKED; the backend is still unshipped/disabled.
+
+Evidence: `build/qa/native-accessibility-r2.log` (three PASS, zero skips).
+The first run had two PASS and one English fixture failure because its custom
+translator returned empty text; the fixture fallback was fixed without weaker
+assertions. This tests-only harness and CI/docs changes do not alter revision 6's
+recipe, payload or installed package.
+
 ### Agent Workspace
 
 External backend source: `agent-sh/agent-workspace-linux`, tag v0.3.2, resolved
@@ -108,6 +133,24 @@ de portal y fallbacks. El transporte fija PATH del sistema y backend portal, con
 regresión frente a overrides ambientales. No concede permisos ni crea sandbox
 automático; browser host, setup y herramientas globales siguen fuera. Falta un
 harness positivo de capacidades/permisos que conserve la frontera de aislamiento.
+
+El 13-09-2026 pasan tres casos positivos del CLI nativo contra Qt/AT-SPI reales
+en inglés/español/catalán. `tests/test-computer-use-accessibility BINARIO SHA256`
+verifica el digest revisado y crea namespace offline sin homes/runtime personal
+ni dispositivos de entrada. Xvfb y los buses de sesión/accesibilidad son privados;
+no activa servicios del host. Descubre exclusivamente el PID del fixture y lee
+campo editable, texto íntegro, geometría y foco reales. Qt conserva la QPalette.
+CI valida el harness y declara skips si falta el fixture nativo; no se han
+ejecutado Actions remotas. Evidencia: `build/qa/native-accessibility-r2.log`.
+
+Sólo acredita accesibilidad del CLI, **no control positivo del desktop por MCP**.
+CLI `state NOMBRE_APP` no admite PID; se comprueba PID/app única antes del filtro.
+MCP exige resolver/enfocar WindowTarget y el backend X11 requiere wmctrl, ausente.
+Xvfb/AT-SPI no suministran portal funcional de captura/input. No se falsifica
+inventario de ventanas ni aprobación de permisos. MCP dirigido, captura, input
+y consentimiento real siguen BLOCKED; backend sin distribuir/activar. Se corrigió
+el fallback inglés del traductor del fixture tras un fallo, sin aflojar aserciones.
+Este lote de tests/CI/docs no cambia receta, payload ni paquete instalado.
 
 Agent Workspace se resolvió a v0.3.2/commit y archive SHA anteriores. Su lock
 incluye 718 paquetes, 29 de Git; GPUI/Zed es incondicional y no hay feature Cargo

@@ -155,6 +155,13 @@ Tests/docs do not change revision 6's build recipe or installed payload.
 
 ### Remaining gates
 
+Follow-up on 2026-09-13: three positive native CLI accessibility cases pass in a
+private Qt/Xvfb/AT-SPI session (en/es/ca). The fixture PID, editable text, bounds and
+focus are verified. See [native helper review](native-helper-review.md) and
+`tests/test-computer-use-accessibility BINARY SHA256`. This does not close targeted
+MCP state, screenshot/input or portal-consent gates; the CLI name filter is not a
+PID-capable MCP target. No helper activation or installed package change occurred.
+
 Phase 1 engineering and phase 3 framework/package work have local evidence.
 Phases 2 and 4–7 must not be represented as fully accepted: live builder trust,
 desktop factory/authenticated tasks, voice/dictation/microphone, real capture/
@@ -172,6 +179,12 @@ The protected checkout's pre-existing changes are preserved; there is no automat
 merge into it. The private Git checkpoint records exact results and the next gates.
 
 ## Español
+
+Seguimiento 13-09-2026: pasan tres casos positivos de accesibilidad del CLI nativo
+en sesión Qt/Xvfb/AT-SPI privada (en/es/ca), verificando PID, texto editable,
+geometría y foco. El harness está descrito en `native-helper-review.md`; no
+acredita MCP dirigido, captura/input ni consentimiento del portal. No se activa
+el helper ni cambia el paquete instalado. Receta/payload de revisión 6 intactos.
 
 Candidato nativo local `26.908.40834-6`, identificado por el commit, receta,
 payload, manifiesto y hashes indicados arriba. Origen APT firmado reverificado;

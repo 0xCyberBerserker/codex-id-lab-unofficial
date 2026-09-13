@@ -47,6 +47,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Added
 
+- Digest-bound offline Qt/AT-SPI native CLI accessibility harness with English/Spanish/Catalan positive cases; targeted MCP state, screenshot/input and real portal consent remain pending.
 - Anonymous offline native-media probe with synthetic audio, private debugging pipe, settings-filter/MediaRecorder checks and CI-discovered transport regressions; actual microphone/transcription remain unverified.
 - Explicit pinned-ASAR dictation adapter regression that validates syntax without executing upstream code or modifying the installed archive.
 - Optional shared-authority companion transport with private Unix WebSocket framing, metadata-only loaded-thread snapshots, bounded polling and explicit sensitive-request denial.
@@ -132,6 +133,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 
 ### Añadido
 
+- Harness offline de accesibilidad CLI nativa Qt/AT-SPI, ligado a digest y con casos positivos en inglés/español/catalán; MCP dirigido, captura/input y consentimiento real del portal siguen pendientes.
 - Prueba multimedia nativa anónima y offline con audio sintético, pipe privado, filtro del selector/MediaRecorder y regresiones de transporte descubiertas por CI; micrófono y transcripción reales siguen sin verificar.
 - Regresión del adaptador de dictado contra ASAR fijado explícito, validando sintaxis sin ejecutar código upstream ni modificar el archivo instalado.
 - Transporte opcional del companion hacia la misma autoridad, WebSocket Unix privado, snapshots de hilos sin conversaciones, polling acotado y rechazo de peticiones sensibles.
