@@ -3,6 +3,13 @@ set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 backend="$(realpath "${1:?explicit reviewed backend required}")"
 expected="${2:?explicit SHA-256 required}"
+mode="${3:-accessibility}"
+[[ "$mode" == accessibility || "$mode" == kwin ]] || exit 2
+if [[ "$mode" == kwin ]]; then
+  for prerequisite in kwin_x11 gdbus rg; do
+    command -v "$prerequisite" >/dev/null || { echo "accessibility-test: NOT_RUN missing $prerequisite" >&2; exit 2; }
+  done
+fi
 [[ "$backend" == /tmp/* && -f "$backend" && -x "$backend" && ! -L "$1" && "$expected" =~ ^[0-9a-f]{64}$ ]] || exit 2
 [[ "$(sha256sum "$backend" | awk '{print $1}')" == "$expected" ]] || { echo 'accessibility-test: backend digest mismatch' >&2; exit 2; }
 for prerequisite in bwrap node python3 Xvfb dbus-daemon timeout; do
@@ -23,6 +30,8 @@ timeout -k 5s 55s bwrap --unshare-all --die-with-parent --new-session \
   --setenv DBUS_SESSION_BUS_ADDRESS unix:path=/tmp/lab-session-bus \
   --setenv CODEX_LAB_TEST_ACCESSIBILITY_BACKEND /tmp/native-helper \
   --setenv CODEX_LAB_TEST_NATIVE_ISOLATED 1 \
+  --setenv CODEX_LAB_TEST_WINDOW_MODE "$mode" --setenv XDG_SESSION_TYPE x11 \
+  --setenv KWIN_COMPOSE N \
   /usr/bin/bash -euo pipefail -c '
     mkdir -m 700 /tmp/home /tmp/config /tmp/cache /tmp/data /tmp/runtime
     Xvfb :99 -screen 0 1024x768x24 -nolisten tcp -extension GLX >/tmp/display.log 2>&1 &
@@ -35,5 +44,21 @@ timeout -k 5s 55s bwrap --unshare-all --die-with-parent --new-session \
       sleep 0.1
     done
     [[ -S /tmp/.X11-unix/X99 ]]
-    node --test /tmp/repo/tests/computer-use-accessibility.test.js
+    if [[ "$CODEX_LAB_TEST_WINDOW_MODE" == kwin ]]; then
+      # Enable actual accessibility only on this private bus, not host settings.
+      gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus \
+        --method org.freedesktop.DBus.Properties.Set org.a11y.Status IsEnabled "<true>"
+      kwin_x11 >/tmp/kwin.log 2>&1 &
+      kwin_pid=$!
+      trap "kill $kwin_pid $display_pid 2>/dev/null || true" EXIT
+      for attempt in {1..50}; do
+        if gdbus introspect --session --dest org.kde.KWin --object-path /Scripting 2>/dev/null | rg -q loadScript; then break; fi
+        if ! kill -0 "$kwin_pid" 2>/dev/null; then tail -n 15 /tmp/kwin.log; exit 1; fi
+        sleep 0.1
+      done
+      gdbus introspect --session --dest org.kde.KWin --object-path /Scripting | rg loadScript
+      node --test /tmp/repo/tests/computer-use-window-target.test.js
+    else
+      node --test /tmp/repo/tests/computer-use-accessibility.test.js
+    fi
   '

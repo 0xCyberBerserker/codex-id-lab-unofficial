@@ -67,14 +67,23 @@ untruncated content, nonzero bounds and focus states. Qt uses the system palette
 CI checks the harness and records explicit skips when this native fixture is
 not supplied; no remote Actions run is claimed.
 
-This is **CLI accessibility acceptance only**, not positive MCP desktop control.
+These three cases are **CLI accessibility acceptance only**. A subsequent private
+KWin X11 test now provides positive targeted MCP state and keyboard acceptance:
+`tests/test-computer-use-accessibility BINARY SHA256 kwin`. Actual KWin scripting
+resolves the unique fixture window to its PID; AT-SPI reads its editable text.
+Real Ctrl+A and typing change only that fixture, and a nonexistent target is
+rejected without changing the text. Accessibility is enabled on the private bus
+only. Capture must fail without a portal, preserving the portal-only policy.
+Evidence: `build/qa/native-kwin-mcp-r5.log` (one PASS, zero skips). This does not
+accept Wayland capture/input consent or activate/ship the helper.
 The CLI `apps` uses AT-SPI directly; CLI `state APP_NAME` has no PID argument, so
 the test verifies the discovered PID/unique app before filtering the snapshot by
 name. MCP `get_app_state` and input first resolve/focus a window target. The generic
 X11 window backend requires wmctrl, absent on this host; Xvfb/AT-SPI alone do not
 provide a working capture/input portal. No fake window inventory or permission
-approval is substituted. Targeted MCP state, screenshot, input and actual portal
-consent remain BLOCKED; the backend is still unshipped/disabled.
+approval is substituted. KWin supplies the real alternative to the missing generic
+wmctrl backend. Positive screenshot and actual Wayland portal consent remain
+BLOCKED; the backend is still unshipped/disabled.
 
 Evidence: `build/qa/native-accessibility-r2.log` (three PASS, zero skips).
 The first run had two PASS and one English fixture failure because its custom
@@ -143,12 +152,22 @@ campo editable, texto íntegro, geometría y foco reales. Qt conserva la QPalett
 CI valida el harness y declara skips si falta el fixture nativo; no se han
 ejecutado Actions remotas. Evidencia: `build/qa/native-accessibility-r2.log`.
 
-Sólo acredita accesibilidad del CLI, **no control positivo del desktop por MCP**.
+Los tres casos acreditan accesibilidad del CLI. La prueba posterior
+`tests/test-computer-use-accessibility BINARIO SHA256 kwin` acredita estado MCP
+dirigido al PID y teclado reales contra un único fixture KWin X11 privado.
+Ctrl+A y escritura cambian su campo; un destino inexistente se rechaza sin cambiar
+el texto. Se habilita accesibilidad únicamente en el bus privado. Sin portal se
+rechaza la captura, sin fallback CLI. Evidencia: `build/qa/native-kwin-mcp-r5.log`
+(un PASS, cero skips). No acredita consentimiento/captura/input Wayland ni activa
+o distribuye el helper. KWin es una alternativa real al backend genérico wmctrl.
+
+El caso CLI por sí solo no acredita control del desktop por MCP.
 CLI `state NOMBRE_APP` no admite PID; se comprueba PID/app única antes del filtro.
-MCP exige resolver/enfocar WindowTarget y el backend X11 requiere wmctrl, ausente.
+MCP exige resolver/enfocar WindowTarget; el backend X11 genérico requiere wmctrl,
+ausente, pero la prueba privada usa KWin real.
 Xvfb/AT-SPI no suministran portal funcional de captura/input. No se falsifica
-inventario de ventanas ni aprobación de permisos. MCP dirigido, captura, input
-y consentimiento real siguen BLOCKED; backend sin distribuir/activar. Se corrigió
+inventario de ventanas ni aprobación de permisos. Captura positiva y consentimiento
+Wayland siguen BLOCKED; backend sin distribuir/activar. Se corrigió
 el fallback inglés del traductor del fixture tras un fallo, sin aflojar aserciones.
 Este lote de tests/CI/docs no cambia receta, payload ni paquete instalado.
 

@@ -47,6 +47,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); pac
 
 ### Added
 
+- Digest-bound private KWin X11 MCP fixture: real PID-directed state, targeted keyboard input, wrong-target denial and portal-only capture denial. Wayland capture/consent and backend activation remain pending.
+
 - Digest-bound offline Qt/AT-SPI native CLI accessibility harness with English/Spanish/Catalan positive cases; targeted MCP state, screenshot/input and real portal consent remain pending.
 - Anonymous offline native-media probe with synthetic audio, private debugging pipe, settings-filter/MediaRecorder checks and CI-discovered transport regressions; actual microphone/transcription remain unverified.
 - Explicit pinned-ASAR dictation adapter regression that validates syntax without executing upstream code or modifying the installed archive.
@@ -132,6 +134,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); las i
 - El actualizador elimina overrides obsoletos del lanzador de usuario tras conservar una copia si estaba personalizado, por lo que las actualizaciones del paquete llegan al menú de aplicaciones.
 
 ### Añadido
+
+- Fixture MCP privado KWin X11 ligado a digest: estado dirigido al PID real, teclado dirigido, rechazo de destino inexistente y captura sin portal. Captura/consentimiento Wayland y activación del backend siguen pendientes.
 
 - Harness offline de accesibilidad CLI nativa Qt/AT-SPI, ligado a digest y con casos positivos en inglés/español/catalán; MCP dirigido, captura/input y consentimiento real del portal siguen pendientes.
 - Prueba multimedia nativa anónima y offline con audio sintético, pipe privado, filtro del selector/MediaRecorder y regresiones de transporte descubiertas por CI; micrófono y transcripción reales siguen sin verificar.
