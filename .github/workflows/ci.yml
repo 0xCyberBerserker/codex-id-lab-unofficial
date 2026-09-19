@@ -34,6 +34,8 @@ jobs:
           npm audit --audit-level=low
 
       - name: Check native portal helper without desktop access
+        env:
+          CODEX_LAB_CI_SHARED_NETWORK_FALLBACK: "1"
         run: |
           TASK_CARGO_CACHE=$(mktemp -d /tmp/codex-lab-cargo.XXXXXX)
           CARGO_HOME="$TASK_CARGO_CACHE" cargo fetch --locked --manifest-path tools/global-dictation/Cargo.toml

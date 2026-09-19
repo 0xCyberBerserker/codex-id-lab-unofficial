@@ -14,7 +14,13 @@ TARGET=$(realpath "$TARGET")
 printf 'Isolated build target: %s\n' "$TARGET"
 ulimit -c 0
 # No personal home, desktop bus, network, credentials or writable host tree.
-exec bwrap --unshare-all --die-with-parent --new-session --ro-bind / / \
+SANDBOX_NETWORK_ARGS=(--unshare-all)
+if [[ "${CODEX_LAB_CI_SHARED_NETWORK_FALLBACK:-0}" == 1 ]]; then
+  # Some hosted runners deny RTM_NEWADDR, so retain filesystem/process isolation
+  # and use the already offline Cargo cache without requesting a network namespace.
+  SANDBOX_NETWORK_ARGS=(--unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup --share-net)
+fi
+exec bwrap "${SANDBOX_NETWORK_ARGS[@]}" --die-with-parent --new-session --ro-bind / / \
   --tmpfs /home --tmpfs /root --tmpfs /run --tmpfs /tmp \
   --ro-bind "$SOURCE" /tmp/source --ro-bind "$CACHE" /tmp/cargo-cache \
   --ro-bind "$TOOLCHAIN" /tmp/toolchain --bind "$TARGET" /tmp/target \
