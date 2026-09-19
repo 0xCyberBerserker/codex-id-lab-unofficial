@@ -20,6 +20,7 @@ if [[ "${CODEX_LAB_CI_SHARED_NETWORK_FALLBACK:-0}" == 1 ]]; then
   export CARGO_HOME="$CACHE"
   export CARGO_TARGET_DIR="$TARGET"
   mkdir -p "$HOME"
+  cd "$SOURCE"
   exec "$TOOLCHAIN/bin/cargo" test --locked --offline && \
     "$TOOLCHAIN/bin/cargo" build --locked --offline --release
 fi
