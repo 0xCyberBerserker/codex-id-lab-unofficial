@@ -184,7 +184,7 @@ jobs:
                 sleep 0.1
               done
               "$1/ChatGPT" --ozone-platform=x11 --disable-dev-shm-usage --disable-gpu \
-                --user-data-dir="$HOME/profile" >"$HOME/runtime.log" 2>&1 &
+                --no-sandbox --user-data-dir="$HOME/profile" >"$HOME/runtime.log" 2>&1 &
               runtime_pid=$!
               for attempt in {1..30}; do
                 kill -0 "$runtime_pid" 2>/dev/null || { tail -n 15 "$HOME/runtime.log"; exit 1; }
