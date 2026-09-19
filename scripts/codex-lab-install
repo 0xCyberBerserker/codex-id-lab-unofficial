@@ -503,11 +503,25 @@ download_asset() {
 
 verify_attestation() {
   local artifact="$1" digest index bundle bundle_url
+  local attestation_status
   local -a bundle_urls
   digest="$(sha256sum "$artifact" | awk '{print $1}')"
   index="$tmpdir/$(basename "$artifact").attestations.json"
   bundle="$tmpdir/$(basename "$artifact").attestations.jsonl"
-  github_api "repos/$REPO/attestations/sha256:$digest?per_page=100" > "$index"
+  attestation_status="$(curl -sS "${github_headers[@]}" -H "Accept: application/vnd.github+json" \
+    -o "$index" -w '%{http_code}' \
+    "https://api.github.com/repos/$REPO/attestations/sha256:$digest?per_page=100")" || {
+    echo "$PROGRAM: unable to query GitHub build provenance for $(basename "$artifact")" >&2
+    exit 1
+  }
+  if [[ "$attestation_status" == 404 ]]; then
+    echo "$PROGRAM: release is missing GitHub build provenance for $(basename "$artifact"); refusing unverified release" >&2
+    exit 1
+  fi
+  [[ "$attestation_status" == 200 ]] || {
+    echo "$PROGRAM: GitHub build provenance query returned HTTP $attestation_status for $(basename "$artifact")" >&2
+    exit 1
+  }
   mapfile -t bundle_urls < <(jq -r '.attestations[]?.bundle_url // empty' "$index")
   [[ "${#bundle_urls[@]}" -gt 0 ]] || { echo "$PROGRAM: no build attestation for $(basename "$artifact")" >&2; exit 1; }
   : > "$bundle"
