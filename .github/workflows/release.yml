@@ -156,6 +156,8 @@ jobs:
 
       - name: Smoke anonymous native candidate without account access
         if: steps.freshness.outputs.fresh != 'true'
+        env:
+          CODEX_LAB_CI_SHARED_NETWORK_FALLBACK: "1"
         run: |
           TASK_SMOKE_CANDIDATE=$(mktemp -d /tmp/codex-lab-smoke.XXXXXX)
           cp -a build/work/pkgroot/opt/codex-id-lab-unofficial/. "$TASK_SMOKE_CANDIDATE/"

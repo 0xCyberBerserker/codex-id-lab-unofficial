@@ -19,10 +19,17 @@ if [[ -n "${CODEX_LAB_SMOKE_EVIDENCE_DIR:-}" ]]; then
   evidence_enabled=1
 fi
 
-# No host home, account, network, desktop socket or sandbox-disabling flags.
+# No host home, account or desktop socket is exposed; the default also isolates
+# the network namespace.
+SANDBOX_NAMESPACE_ARGS=(--unshare-all)
+if [[ "${CODEX_LAB_CI_SHARED_NETWORK_FALLBACK:-0}" == 1 ]]; then
+  # Hosted runners can deny user/network namespaces. Keep filesystem, home and
+  # desktop isolation, but use the runner's network namespace explicitly.
+  SANDBOX_NAMESPACE_ARGS=()
+fi
 set +e
 # shellcheck disable=SC2016 # Variables deliberately expand inside the isolated shell.
-output="$(timeout -k 5s 20s bwrap --unshare-all --die-with-parent --new-session \
+output="$(timeout -k 5s 20s bwrap "${SANDBOX_NAMESPACE_ARGS[@]}" --die-with-parent --new-session \
   --ro-bind / / --tmpfs /tmp --tmpfs /home --tmpfs /root --tmpfs /run \
   "${evidence_binds[@]}" \
   --dev /dev --proc /proc --ro-bind "$candidate" /tmp/candidate \
