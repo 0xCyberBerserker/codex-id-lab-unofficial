@@ -15,10 +15,11 @@ if [[ "${CODEX_LAB_CI_SHARED_NETWORK_FALLBACK:-0}" == 1 ]]; then
   # Hosted runners may reject bubblewrap's implicit user namespace too. The
   # workflow is disposable and credential-free, so run this Node test with a
   # clean environment instead; local runs keep the full bubblewrap sandbox.
+  node_bin=$(command -v node)
   exec env -i PATH=/usr/bin HOME=/tmp/codex-lab-ci-home \
     CODEX_HOME=/tmp/codex-lab-ci-home/codex \
     CODEX_LAB_TEST_NATIVE_CLI="$cli" CODEX_LAB_TEST_NATIVE_ISOLATED=1 \
-    timeout -k 5s 20s /usr/bin/node --test "$repo/tests/shared-app-server.test.js"
+    timeout -k 5s 20s "$node_bin" --test "$repo/tests/shared-app-server.test.js"
 fi
 timeout -k 5s 20s bwrap "${SANDBOX_NAMESPACE_ARGS[@]}" --die-with-parent --new-session \
   --ro-bind / / --tmpfs /home --tmpfs /root --tmpfs /tmp --tmpfs /run \
