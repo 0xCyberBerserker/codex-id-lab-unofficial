@@ -162,7 +162,42 @@ jobs:
           TASK_SMOKE_CANDIDATE=$(mktemp -d /tmp/codex-lab-smoke.XXXXXX)
           cp -a build/work/pkgroot/opt/codex-id-lab-unofficial/. "$TASK_SMOKE_CANDIDATE/"
           bash scripts/test-shared-authority "$TASK_SMOKE_CANDIDATE/resources/codex"
-          scripts/smoke-linux-candidate "$TASK_SMOKE_CANDIDATE"
+          # Hosted runners deny the user namespace required by the graphical
+          # bubblewrap smoke. Keep this fallback credential-free and disposable;
+          # local smoke runs retain full bubblewrap isolation.
+          TASK_SMOKE_HOME=$(mktemp -d /tmp/codex-lab-smoke-home.XXXXXX)
+          env -i PATH=/usr/bin HOME="$TASK_SMOKE_HOME" DISPLAY=:99 \
+            XDG_CONFIG_HOME="$TASK_SMOKE_HOME/config" \
+            XDG_DATA_HOME="$TASK_SMOKE_HOME/data" \
+            XDG_CACHE_HOME="$TASK_SMOKE_HOME/cache" \
+            XDG_RUNTIME_DIR="$TASK_SMOKE_HOME/runtime" \
+            CODEX_HOME="$TASK_SMOKE_HOME/codex" \
+            bash -c '
+              set -euo pipefail
+              mkdir -p "$HOME/config" "$HOME/data" "$HOME/cache" "$HOME/runtime" "$CODEX_HOME"
+              Xvfb :99 -screen 0 1024x768x24 -nolisten tcp -extension GLX >"$HOME/xvfb.log" 2>&1 &
+              display_pid=$!
+              trap '\''kill "$display_pid" 2>/dev/null || true'\'' EXIT
+              for attempt in {1..20}; do
+                kill -0 "$display_pid" 2>/dev/null || { tail -n 15 "$HOME/xvfb.log"; exit 1; }
+                xdotool getdisplaygeometry >/dev/null 2>&1 && break
+                sleep 0.1
+              done
+              "$1/ChatGPT" --ozone-platform=x11 --disable-dev-shm-usage --disable-gpu \
+                --user-data-dir="$HOME/profile" >"$HOME/runtime.log" 2>&1 &
+              runtime_pid=$!
+              for attempt in {1..30}; do
+                kill -0 "$runtime_pid" 2>/dev/null || { tail -n 15 "$HOME/runtime.log"; exit 1; }
+                if xdotool search --onlyvisible --name '\''^(Codex|ChatGPT)'\'' >/dev/null 2>&1; then
+                  echo ANONYMOUS_CANDIDATE_WINDOW_OBSERVED
+                  kill "$runtime_pid" 2>/dev/null || true
+                  exit 0
+                fi
+                sleep 0.3
+              done
+              echo NO_CANDIDATE_WINDOW_OBSERVED >&2
+              exit 1
+            ' _ "$TASK_SMOKE_CANDIDATE"
 
       - name: Privacy audit
         if: steps.freshness.outputs.fresh != 'true'
