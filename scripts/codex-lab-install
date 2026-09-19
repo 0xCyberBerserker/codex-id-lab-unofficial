@@ -502,12 +502,10 @@ download_asset() {
 }
 
 verify_attestation() {
-  local artifact="$1" digest index bundle bundle_url
+  local artifact="$1" digest index
   local attestation_status
-  local -a bundle_urls
   digest="$(sha256sum "$artifact" | awk '{print $1}')"
   index="$tmpdir/$(basename "$artifact").attestations.json"
-  bundle="$tmpdir/$(basename "$artifact").attestations.jsonl"
   attestation_status="$(curl -sS "${github_headers[@]}" -H "Accept: application/vnd.github+json" \
     -o "$index" -w '%{http_code}' \
     "https://api.github.com/repos/$REPO/attestations/sha256:$digest?per_page=100")" || {
@@ -522,15 +520,7 @@ verify_attestation() {
     echo "$PROGRAM: GitHub build provenance query returned HTTP $attestation_status for $(basename "$artifact")" >&2
     exit 1
   }
-  mapfile -t bundle_urls < <(jq -r '.attestations[]?.bundle_url // empty' "$index")
-  [[ "${#bundle_urls[@]}" -gt 0 ]] || { echo "$PROGRAM: no build attestation for $(basename "$artifact")" >&2; exit 1; }
-  : > "$bundle"
-  for bundle_url in "${bundle_urls[@]}"; do
-    [[ "$bundle_url" == https://* ]] || { echo "$PROGRAM: unsafe attestation bundle URL" >&2; exit 1; }
-    curl -fsSL "$bundle_url" | jq -c . >> "$bundle"
-  done
   gh attestation verify "$artifact" \
-    --bundle "$bundle" \
     --repo "$REPO" \
     --signer-workflow "$REPO/.github/workflows/release.yml" \
     --source-ref refs/heads/main \
