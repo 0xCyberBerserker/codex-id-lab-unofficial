@@ -34,7 +34,16 @@ codex-lab-install --smoke
 
 The smoke test launches Codex UI with a temporary profile and verifies that the native runtime remains active.
 
-Voice and composer dictation are provided by the official Linux runtime and use the selected PipeWire microphone. Microphone access must also be allowed by the desktop portal or session policy.
+Voice and composer dictation are inherited where the official runtime/account support them; packaging does not grant microphone permission or server capabilities. Real authenticated voice/dictation are NOT_RUN in the local development candidate.
+
+`codex-lab-tools features` opens feature preferences; saving requests a future
+rebuild, not installation. `codex-lab-tools features-json`,
+`codex-lab-update --status` and `--doctor` expose sanitized local state.
+`--wait` defers elevation until the runtime closes. Changed build profiles require
+`--allow-profile-change`; explicit downgrades also require
+`--accept-data-downgrade-risk`. No flag restores or deletes user data.
+See [features](docs/features.md), [recovery](docs/updater-recovery.md) and
+[local AppImage limits](docs/appimage.md).
 
 ## Local Companion
 
@@ -55,6 +64,7 @@ The companion is a separate process and does not restart Codex UI. Detailed comm
 ## Security Notes
 
 - Public release downloads do not require authentication.
+- GitHub CLI (`gh`) verifies the manifest and package build provenance.
 - Private forks or rate-limited environments can use `GITHUB_TOKEN` or `GH_TOKEN`.
 - Do not store chats, credentials, profiles, runtime databases, or local project material in this repository.
 
@@ -98,7 +108,14 @@ codex-lab-install --smoke
 
 El smoke test lanza Codex UI con un perfil temporal y comprueba que el runtime nativo permanece activo.
 
-La voz y el dictado del compositor los proporciona el runtime Linux oficial y usan el micrófono PipeWire seleccionado. El portal del escritorio o la política de sesión también deben permitir el acceso al micrófono.
+Voz y dictado se heredan cuando el runtime oficial y la cuenta los permiten; el empaquetado no concede permisos de micrófono ni capacidades del servidor. Voz y dictado autenticados siguen NOT_RUN en el candidato local.
+
+`codex-lab-tools features` abre preferencias para un rebuild futuro, sin instalar.
+`features-json`, `codex-lab-update --status` y `--doctor` muestran estado local
+saneado. `--wait` espera al cierre antes de elevar privilegios. Cambiar el perfil
+exige `--allow-profile-change`; un downgrade exige además
+`--accept-data-downgrade-risk`. Ningún flag restaura ni borra datos personales.
+Consulta funciones, recuperación y límites AppImage en los enlaces anteriores.
 
 ## Companion local
 
@@ -119,6 +136,7 @@ El companion es un proceso independiente y no reinicia Codex UI. Los comandos y 
 ## Notas de seguridad
 
 - Las descargas públicas de release no requieren autenticación.
+- GitHub CLI (`gh`) verifica la procedencia de build del manifiesto y del paquete.
 - Forks privados o entornos con rate limit pueden usar `GITHUB_TOKEN` o `GH_TOKEN`.
 - No guardes chats, credenciales, perfiles, bases runtime ni material local de proyectos en este repositorio.
 

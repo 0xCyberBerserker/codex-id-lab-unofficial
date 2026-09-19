@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "components": [
+    {
+      "repository": "https://github.com/ilysenko/codex-desktop-linux",
+      "commit": "249cd4b64d42434f51417fec4a318750d461b676",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ilysenko",
+      "licensePath": "third-party/ilysenko/LICENSE",
+      "imports": [
+        {
+          "source": "linux-features/shared-app-server-socket/patch.js",
+          "destination": "linux-features/shared-app-server-socket/patch.js",
+          "upstreamSha256": "e764943d87291075e4bdbda8602488c9307bdbd693f7e2a1150c5c884e3a90df",
+          "modifications": ["Added MIT attribution; private same-user runtime paths, bundled/absolute CLI, automatic namespaced socket, opaque override preservation and owned cleanup. Drains stderr without retaining diagnostics. Excludes SSH hooks, attached CLI command and global orphan reaper."]
+        },
+        {
+          "source": "linux-features/shared-app-server-socket/test.js",
+          "destination": "tests/shared-app-server.fixture.js",
+          "upstreamSha256": "a4827f331e50c846db72ecc86b84dbeba08e9e5efe200e59d971d4fb3aeaa07f",
+          "modifications": ["Selected fake child, VM transport loader and synthetic main bundle only; exposed Buffer for bounded Unix paths. Local lifecycle, staging and real isolated CLI tests are separate."]
+        },
+        {
+          "source": "linux-features/computer-use-linux/native-service.mjs",
+          "destination": "linux-features/computer-use-linux/native-service.mjs",
+          "upstreamSha256": "3b7cb07cc7640aec56f6d638426ffd9f2500c30ed7ed6825c1e243ceb6b5fe5f",
+          "modifications": ["Added MIT attribution; bounded JSON-RPC framing/concurrency, mandatory app targeting, input/image limits and initialization drift rejection. Pins system PATH and portal-only screenshot capture, preventing ambient CLI fallback. No backend binary or runtime activation imported."]
+        },
+        {
+          "source": "linux-features/computer-use-linux/native-client.mjs",
+          "destination": "linux-features/computer-use-linux/native-client.mjs",
+          "upstreamSha256": "d520e3a935adfe21fdfd76cec60ca41df6997d52bac442d2dc690222a3110b74",
+          "modifications": ["Added MIT attribution; implementation unchanged, development-only until audited backend integration."]
+        },
+        {
+          "source": "linux-features/computer-use-linux/native.test.js",
+          "destination": "linux-features/computer-use-linux/native.test.js",
+          "upstreamSha256": "9cacb3ea4cacd14d1221ee5f6c159673bb0ae7af0f62be20a5fa9c2cedf70a24",
+          "modifications": ["Added MIT attribution; changed untargeted input fixtures to explicit targets and added four Lab fail-closed framing/input regressions."]
+        },
+        {
+          "source": "scripts/lib/linux-features.js",
+          "destination": "scripts/lib/linux-features.js",
+          "upstreamSha256": "29a0d601edf087a9a999c8ae9d47d7b13b57db6b25131c20cb1ee41fc3f57051",
+          "modifications": [
+            "Added SPDX and copyright attribution comments; implementation unchanged."
+          ]
+        },
+        {
+          "source": "scripts/lib/linux-features.test.js",
+          "destination": "scripts/lib/linux-features.test.js",
+          "upstreamSha256": "763093ad07da77b51af603323b0f26a86574e69b5a01c1737bc8a927dc29e251",
+          "modifications": [
+            "Added SPDX and copyright attribution comments; tests unchanged."
+          ]
+        },
+        {
+          "source": "linux-features/compatibility.json",
+          "destination": "linux-features/compatibility.json",
+          "upstreamSha256": "882d2f1e283c115c0d7d4bea91da466d9402b80426f78111fed7b8802eed37d3",
+          "modifications": []
+        },
+        {
+          "source": "scripts/patches/descriptor.js",
+          "destination": "scripts/patches/descriptor.js",
+          "upstreamSha256": "c7f5012787165d1e1c9c6a0b7f85fe7140782a8869b50e7b0aa66564f9412a23",
+          "modifications": [
+            "Added SPDX and copyright attribution comments; descriptor contract unchanged. Required by the imported framework regression test."
+          ]
+        },
+        {
+          "source": "linux-features/appshots/patch.js",
+          "destination": "linux-features/appshots/patch.js",
+          "upstreamSha256": "e343adf528493e4e13525cd19c1bc4a96e9f9a85f01d42f89e26dae796fb88ec",
+          "modifications": [
+            "Added attribution; implementation retained. Adapter deliberately excludes hotkey descriptor and helper.",
+            "Removed automatic HOME/plugin-cache/latest backend lookup. Only bundled backend or explicit SHA-256-approved executable is accepted; world/group-writable and symlink backends are rejected."
+          ]
+        },
+        {
+          "source": "linux-features/read-aloud/patch.js",
+          "destination": "linux-features/read-aloud/webview.js",
+          "upstreamSha256": "f5be27e40d5ad6ec6327aa865befcb41ebdded1f1aa6389c67f98d98c0481151",
+          "modifications": [
+            "Selected assistant-render and webview-runtime functions only. No host installer/downloader or settings UI imported. Lab host adapter is separate."
+          ]
+        },
+        {
+          "source": "linux-features/appshots/test.js",
+          "destination": "tests/runtime-features.test.js",
+          "upstreamSha256": "24852e7d0f0847ef14585936270624977857e6863c2b75bc8aa07d8dcb09c08a",
+          "modifications": [
+            "Selected and adapted fixture contracts; additional integration tests are local code."
+          ]
+        },
+        {
+          "source": "global-dictation-linux/Cargo.toml",
+          "destination": "tools/global-dictation/Cargo.toml",
+          "upstreamSha256": "c14a42c6369a391d2ff398f57ff7525f1314f689382f56ee18b286b2f9612da3",
+          "modifications": [
+            "Declared inherited MIT license explicitly."
+          ]
+        },
+        {
+          "source": "global-dictation-linux/Cargo.lock",
+          "destination": "tools/global-dictation/Cargo.lock",
+          "upstreamSha256": "a8331385a10335c87988d520649b9199d91b2107a3f7bade1100ebeaeb554064",
+          "modifications": [
+            "Updated event-listener 5.4.1 to 5.4.2 for RUSTSEC-2026-0221; locked registry checksums retained."
+          ]
+        },
+        {
+          "source": "global-dictation-linux/src/main.rs",
+          "destination": "tools/global-dictation/src/main.rs",
+          "upstreamSha256": "64c49407eddae1e1d6ac3fd715485d2c6a3f4a7cc460b334a69bea85664a173f",
+          "modifications": [
+            "Added MIT attribution, unconditional portal session cleanup, interrupted-chord release and one regression test; formatted with rustfmt."
+          ]
+        },
+        {
+          "source": "linux-features/global-dictation/patch.js",
+          "destination": "linux-features/global-dictation/patch.js",
+          "upstreamSha256": "7e3c1ab39334582c3616b4e18aeeb1cc9e5c5936d0fe4c340d10fa0543391ee3",
+          "modifications": [
+            "Added MIT attribution; Wayland-only registration/capability, disabled X11 paste/watcher, bundled-only regular non-writable executable lookup."
+          ]
+        },
+        {
+          "source": "linux-features/global-dictation/test.js",
+          "destination": "tests/global-dictation.test.js",
+          "upstreamSha256": "bde1fe929cde9fdf8b116a84b10bd87c4400e5cd234825f1fcd115f9b7bca3c0",
+          "modifications": [
+            "Selected main-bundle fixture only; local Wayland-only framing, explicit paste and child cleanup tests. No X11 watcher tests or helper imported."
+          ]
+        }
+      ],
+      "tests": [
+        "node --test linux-features/computer-use-linux/native.test.js",
+        "node --test scripts/lib/linux-features.test.js",
+        "node --test tests/lab-features.test.js",
+        "python3 -m unittest tests.test_release_identity -v",
+        "node --test tests/runtime-features.test.js",
+        "node --test tests/global-dictation.test.js",
+        "tools/global-dictation/test-isolated TEMP_CARGO_CACHE"
+      ],
+      "scope": "Selective framework, patches, webview functions and Rust portal helper source/tests. No external installer, downloaded binary, global input watcher, updater or model downloader imported.",
+      "localAdapter": "scripts/lab-features.js",
+      "licenseException": "Imported files remain MIT and are not relicensed under the project's PolyForm Noncommercial license."
+    },
+    {
+      "repository": "https://github.com/AppImage/type2-runtime",
+      "commit": "75849dce7cc37e4319b633df1f116ca895c71a12",
+      "license": "MIT for runtime source only; static library obligations separate",
+      "copyright": "Copyright (c) 2004-23 probonopd",
+      "licensePath": "third-party/appimage/LICENSE",
+      "imports": [
+        {
+          "source": "signing-pubkey.asc",
+          "destination": "resources/appimage-runtime-key.asc",
+          "upstreamSha256": "db8b615eb5bbf5e8418d52906b4a492960926370e2c5041ad6acaccda56ef0c6",
+          "modifications": []
+        },
+        {
+          "source": "LICENSE",
+          "destination": "third-party/appimage/LICENSE",
+          "upstreamSha256": "aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2230f9c0ca1",
+          "modifications": []
+        }
+      ],
+      "binary": {
+        "imported": false,
+        "scope": "External local-candidate builder input only; not committed or bundled in base packages",
+        "sha256": "1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf",
+        "primaryFingerprint": "570C77ACEA40C0F1B758902CBF96CCA56490F695"
+      },
+      "tests": [
+        "python3 -m unittest tests.test_appimage_candidate -v"
+      ],
+      "scope": "Pinned public key/license for local-only signed-runtime AppImage experiments.",
+      "redistribution": "BLOCKED pending statically linked libraries license/source obligations and GUI/dependency acceptance."
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import importlib.util
 import os
 from pathlib import Path
 import tempfile
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -15,10 +16,65 @@ MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "codex-lab-compa
 SPEC = importlib.util.spec_from_file_location("codex_ui_companion", MODULE_PATH)
 assert SPEC and SPEC.loader
 companion = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(companion)
+sys.path.insert(0, str(MODULE_PATH.parent))
+try:
+    SPEC.loader.exec_module(companion)
+finally:
+    sys.path.pop(0)
 
 
 class NormalizeAccountDataTest(unittest.TestCase):
+    def test_shared_socket_selection_never_starts_an_independent_authority(self) -> None:
+        with patch.dict(os.environ, {"CODEX_LAB_SHARED_APP_SERVER_SOCKET": "auto", "XDG_RUNTIME_DIR": "/tmp/fixture"}), patch.object(companion, "codex_command") as command:
+            client = companion.account_client()
+            self.assertIsInstance(client, companion.SharedAccountClient)
+            self.assertEqual(client.socket_path, "/tmp/fixture/codex-id-lab-unofficial/app-server-bridge/app-server.sock")
+            command.assert_not_called()
+            client.close()
+
+    def test_task_summary_is_localized_and_does_not_expose_thread_ids(self) -> None:
+        tasks = {"status": "loaded-thread-snapshot", "items": [{"id": "private-id", "type": "active", "needs_attention": True}]}
+        for language in ("en", "es", "ca"):
+            with patch.dict(os.environ, {"CODEX_LAB_LANG": language}):
+                text = companion.tasks_text(tasks)
+                self.assertNotIn("private-id", text)
+                self.assertIn("1", text)
+                self.assertIn(companion.tr("tasks_partial"), text)
+
+    def test_missing_invalid_and_decimal_percentages(self) -> None:
+        invalid_values = [None, True, "42", -1, 101, float("nan"), float("inf")]
+        for value in invalid_values:
+            with self.subTest(value=value):
+                data = companion.normalize_account_data({}, {"rateLimits": {"limitId": "bucket", "primary": {"usedPercent": value, "windowDurationMins": 17}}})
+                self.assertIsNone(data["limits"][0]["used_percent"])
+                self.assertIsNone(data["limits"][0]["remaining_percent"])
+                self.assertEqual(data["limits"][0]["bucket_id"], "bucket")
+                self.assertEqual(data["limits"][0]["window_minutes"], 17)
+        data = companion.normalize_account_data({}, {"rateLimits": {"primary": {"usedPercent": 42.25, "resetsAt": 1}}})
+        self.assertEqual(data["limits"][0]["used_percent"], 42.25)
+        self.assertEqual(data["limits"][0]["remaining_percent"], 57.75)
+        self.assertIsNone(data["reset_credits"])
+        self.assertEqual(data["tasks"]["status"], "desktop-provider-unavailable")
+
+    def test_secondary_endpoint_failure_does_not_erase_limits(self) -> None:
+        with patch.object(companion, "AccountClient") as client_class:
+            client = client_class.return_value
+            client.request.side_effect = [
+                {"rateLimits": {"primary": {"usedPercent": 12.5}}},
+                RuntimeError("unsupported secondary endpoint"),
+            ]
+            with patch.object(companion, "codex_command", return_value=["fixture"]):
+                data = companion.query_codex_account()
+            self.assertEqual(data["limits"][0]["remaining_percent"], 87.5)
+            self.assertEqual(data["usage_status"], "unavailable")
+            self.assertIsNone(data["activity"]["lifetime_tokens"])
+            client.close.assert_called_once()
+
+    def test_duplicate_account_snapshots_ignore_presentation_timestamps(self) -> None:
+        first = companion.normalize_account_data({}, {"rateLimits": {"primary": {"usedPercent": 12.5}}})
+        second = dict(first, updated_at=first["updated_at"] + 10)
+        self.assertEqual(companion.account_snapshot_signature(first), companion.account_snapshot_signature(second))
+
     def test_normalizes_limits_without_scanning_sessions(self) -> None:
         usage = {
             "summary": {
@@ -76,6 +132,17 @@ class CrashReportTest(unittest.TestCase):
 
 
 class LocalIntegrationTest(unittest.TestCase):
+    def test_locales_have_matching_keys(self) -> None:
+        for locale_name in ("es", "ca"):
+            self.assertEqual(set(companion.TEXT["en"]), set(companion.TEXT[locale_name]))
+            with patch.dict(os.environ, {"CODEX_LAB_LANG": locale_name}):
+                self.assertEqual(companion.language(), locale_name)
+
+    def test_popup_geometry_clamps_monitor_edges_in_logical_coordinates(self) -> None:
+        self.assertEqual(companion.popup_geometry((0, 0, 1920, 1080), (400, 480), (1919, 1079)), (1520, 599, 400, 480))
+        self.assertEqual(companion.popup_geometry((-1280, 0, 1280, 720), (400, 480), (-1270, 10)), (-1280, 0, 400, 480))
+        self.assertEqual(companion.popup_geometry((0, 0, 320, 240), (400, 480)), (0, 0, 320, 240))
+
     def test_finds_user_local_tessdata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(os.environ, {"XDG_DATA_HOME": directory}):

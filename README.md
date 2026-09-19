@@ -29,19 +29,50 @@ This repository repackages the official ChatGPT Linux runtime through auditable 
 | Area | Current signal |
 | --- | --- |
 | Release builder | GitHub Actions is authoritative |
-| Source tracking | Signed official Linux repository, package SHA256 manifest |
+| Source tracking | Signed official repository; builder-attestation implementation awaits its live promotion gate |
 | Linux targets | Arch/CachyOS, Debian/Ubuntu, Fedora/RHEL-like |
 | Public status | Public automation repository |
 | Data boundary | No chats, credentials, runtime state, private data, or local paths |
 | AUR status | Metadata prepared, not published |
+| Validation | Real package parsers and disposable fixtures; desktop/session acceptance is separate |
+
+The optional feature framework is selectively reused from [Ilysenko's MIT-licensed snapshot](https://github.com/ilysenko/codex-desktop-linux/tree/249cd4b64d42434f51417fec4a318750d461b676). See [import inventory](third-party/upstream.lock.json), [feature adapter](linux-features/README.md) and [validation boundaries](docs/validation.md).
+
+The local development candidate adds a persistent QPalette quota companion,
+English/Spanish/Catalan feature preferences, retained verified update candidates,
+and opt-in AppShots/Read Aloud/Wayland dictation build adapters. A local-only
+[AppImage recipe](docs/appimage.md) has real format/fixture tests, not GUI portability acceptance. These are not a published release
+or a global parity claim. See [feature gates](docs/features.md),
+[update recovery](docs/updater-recovery.md) and [import maintenance](docs/upstream-maintenance.md).
+Revision 6 additionally provides exact retained-candidate recovery and an opt-in
+shared-authority companion snapshot of loaded threads, without conversation reads
+or a second server. Native Computer Use development builds and notice collection
+are measured separately; runtime activation is still blocked. See
+[helper review evidence](docs/native-helper-review.md).
+See the [exact revision 6 candidate evidence](docs/candidate-r6.md).
+Updates inherit native upstream features, but never autoimport unreviewed patches
+or grant server/account entitlements.
+
+El framework opcional se reutiliza selectivamente del snapshot MIT fijado de Ilysenko. El inventario conserva atribución y licencia; las pruebas de empaquetado no equivalen a aceptación de voz, dictado o sesión real.
+
+El candidato local incorpora cuotas persistentes en Qt/QPalette, preferencias
+en inglés/español/catalán, candidatos de actualización conservados y adaptadores
+opt-in AppShots/Read Aloud/dictado Wayland. La receta AppImage pasa pruebas de
+formato/fixture, no aceptación GUI/portabilidad. No está publicado ni demuestra paridad global.
+Los gates funcionales y de recuperación se documentan por separado.
+La revisión 6 añade recuperación del candidato exacto y snapshots opt-in de hilos
+del mismo App Server, sin leer conversaciones ni iniciar otro servidor. Se probaron
+builds nativos de Computer Use y avisos transitivos, no activación del escritorio.
+La ingeniería del wrapper prepara actualizaciones; no autoimporta parches nuevos
+sin licencia, compatibilidad y pruebas, ni concede funciones de cuenta del servidor.
 
 ## What It Builds
 
 - Arch/CachyOS package: `.pkg.tar.zst`
 - Debian/Ubuntu package: `.deb` (experimental)
 - Fedora/RHEL-like package: `.rpm` (experimental)
-- Verified official Linux source package: `chatgpt_$VERSION_amd64.deb`
-- Release manifest and checksums
+- Verified official Linux source package: `chatgpt_$UPSTREAM_VERSION_amd64.deb`
+- External release manifest with final artifact digests, plus an embedded build-identity manifest without self-hashes
 - Native Qt companion for usage, OCR, private QR capture, and safe crash metadata
 - Future AUR metadata under `packaging/aur`
 
@@ -88,7 +119,7 @@ Run a smoke test:
 codex-lab-install --smoke
 ```
 
-Public release downloads do not require authentication. Private forks can use `GITHUB_TOKEN` or `GH_TOKEN`.
+Public release downloads do not require authentication. GitHub CLI is required to verify build attestations. Private forks can use `GITHUB_TOKEN` or `GH_TOKEN`.
 
 `codex-lab-update` is the short alias. Legacy `codex-ui-*` launchers are removed during migration.
 
@@ -96,22 +127,32 @@ Public release downloads do not require authentication. Private forks can use `G
 
 GitHub Actions is the authoritative builder.
 
-Every scheduled or manual run downloads the current official Linux package, pins and validates the repository signing-key fingerprint, verifies `InRelease`, checks the package against the signed index, and compares source and build-recipe fingerprints with the existing release. It rebuilds only when needed and refreshes changed assets with `--clobber`.
+Every scheduled or manual run verifies the pinned repository key, `InRelease`, the package index, and the selected source package. Releases use `$UPSTREAM_VERSION-$REVISION`, remain immutable after publication, and are promoted from a draft only after the complete asset set receives GitHub build-provenance attestations.
+Promotion remains disabled until the maintainer approves the live signing identity with the repository variable `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true`.
+
+The identity also binds the architecture, base feature profile, build recipe, prepared payload, source archive, and final package digests.
+
+### Pipeline de release
+
+Cada ejecución verifica la clave fijada del repositorio, `InRelease`, el índice y el paquete fuente seleccionado. Las releases usan `$UPSTREAM_VERSION-$REVISION`, son inmutables tras publicarse y sólo se promocionan desde draft cuando el conjunto completo dispone de attestations de procedencia de GitHub.
+La promoción permanece desactivada hasta que el responsable apruebe la identidad de firma en vivo mediante `CODEX_LAB_RELEASE_PROMOTION_ENABLED=true`.
+
+La identidad también vincula arquitectura, perfil base de funciones, receta, payload preparado, paquete fuente y hashes finales de los paquetes.
 
 ### Automatic Feature Tracking
 
-Each run preserves the official Linux runtime unchanged. Voice, dictation, native app tools, plugins, and later upstream features arrive with the next signed official package. XWayland remains the default; native Wayland can be requested with `CODEX_LAB_OZONE_PLATFORM=wayland` and remains experimental upstream.
+The base profile preserves the official Linux runtime unchanged and tracks its signed packages. Upstream voice, dictation, native app tools and plugins are inherited where that runtime, account and desktop support them; packaging tests do not establish feature parity. XWayland remains the default; native Wayland can be requested with `CODEX_LAB_OZONE_PLATFORM=wayland` and remains experimental upstream.
 
 ### Seguimiento automático de funciones
 
-Cada ejecución conserva sin modificar el runtime Linux oficial. Voz, dictado, herramientas nativas, plugins y funciones upstream posteriores llegan con el siguiente paquete oficial firmado. XWayland sigue siendo el modo predeterminado; Wayland nativo puede solicitarse con `CODEX_LAB_OZONE_PLATFORM=wayland` y continúa siendo experimental upstream.
+El perfil base conserva el runtime Linux oficial y sigue sus paquetes firmados. Hereda voz, dictado, herramientas y plugins cuando el runtime, la cuenta y el escritorio los soportan; las pruebas de paquetes no demuestran paridad. XWayland sigue siendo el modo predeterminado; Wayland nativo puede solicitarse con `CODEX_LAB_OZONE_PLATFORM=wayland` y continúa siendo experimental upstream.
 
 Required release assets:
 
-- `chatgpt_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1-x86_64.pkg.tar.zst`
-- `codex-id-lab-unofficial_$VERSION_amd64.deb`
-- `codex-id-lab-unofficial-$VERSION-1.x86_64.rpm`
+- `chatgpt_$UPSTREAM_VERSION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION-x86_64.pkg.tar.zst`
+- `codex-id-lab-unofficial_$UPSTREAM_VERSION-$REVISION_amd64.deb`
+- `codex-id-lab-unofficial-$UPSTREAM_VERSION-$REVISION.x86_64.rpm`
 - `manifest.json`
 - `checksums.txt`
 

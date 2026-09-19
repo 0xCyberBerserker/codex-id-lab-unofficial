@@ -14,7 +14,7 @@ After installation:
 codex-lab-install
 ```
 
-The updater detects the host OS, downloads the latest compatible package from the GitHub release, verifies checksums, installs the package, and checks the installed command.
+The updater detects the host OS, authenticates the release manifest and package against the main-branch GitHub workflow, verifies checksums, installs the package, and checks the installed identity.
 
 ## Supported Systems
 
@@ -24,9 +24,15 @@ The updater detects the host OS, downloads the latest compatible package from th
 
 ## Authentication
 
-Public releases do not require authentication.
+Public releases do not require authentication, but GitHub CLI (`gh`) is required for offline attestation verification.
 
-Private forks or rate-limited environments can authenticate with `GITHUB_TOKEN` or `GH_TOKEN`. Public GitHub releases use the unauthenticated Releases API and do not require GitHub CLI.
+Private forks or rate-limited environments can authenticate with `GITHUB_TOKEN` or `GH_TOKEN`.
+
+Install an exact package identity, including an explicit downgrade:
+
+```bash
+codex-lab-install --version 26.1.2-2
+```
 
 ## Smoke Test
 
@@ -81,6 +87,10 @@ bold title shown by Discord. Asset fields accept keys configured in the Discord
 Developer Portal. Restart Codex UI after editing the file.
 
 No client secret or API key is required.
+
+## Actualización y autenticación (Español)
+
+El instalador autentica el manifiesto y el paquete contra el workflow de GitHub de la rama principal. Las releases públicas no requieren login, pero sí GitHub CLI (`gh`) para verificar la attestation localmente. Una versión exacta o downgrade explícito usa `codex-lab-install --version VERSION-REVISION`.
 
 ## Voz y dictado (Español)
 

@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_BASE="https://persistent.oaistatic.com/codex-app-prod/linux/deb"
-LATEST_URL="$REPO_BASE/latest/chatgpt_amd64.deb"
 EXPECTED_FINGERPRINT="3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4"
+TRUSTED_KEY="$ROOT/resources/codex-linux-repository-key.asc"
 OUTPUT="ChatGPT-source.deb"
 GITHUB_OUTPUT_FILE=""
+VERIFY_CACHE=0
+METADATA_ONLY=0
+ALLOW_CACHED_DOWNLOAD=0
+
+if [[ "${CODEX_LAB_RESOLVER_TEST_MODE:-0}" == "1" ]]; then
+  REPO_BASE="${CODEX_LAB_TEST_REPO_BASE:?CODEX_LAB_TEST_REPO_BASE is required in test mode}"
+  EXPECTED_FINGERPRINT="${CODEX_LAB_TEST_EXPECTED_FINGERPRINT:?CODEX_LAB_TEST_EXPECTED_FINGERPRINT is required in test mode}"
+  TRUSTED_KEY="${CODEX_LAB_TEST_TRUSTED_KEY:?CODEX_LAB_TEST_TRUSTED_KEY is required in test mode}"
+fi
 
 usage() {
   cat <<'EOF'
 Usage: scripts/resolve-linux-source [--output FILE] [--github-output FILE]
+       [--metadata-only|--verify-cache|--download-from-cache]
 
 Downloads the current official Linux package and verifies it against the
 signed OpenAI APT repository metadata.
@@ -20,6 +31,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --output) shift; OUTPUT="${1:-}" ;;
     --github-output) shift; GITHUB_OUTPUT_FILE="${1:-}" ;;
+    --verify-cache) VERIFY_CACHE=1 ;;
+    --metadata-only) METADATA_ONLY=1 ;;
+    --download-from-cache) VERIFY_CACHE=1; ALLOW_CACHED_DOWNLOAD=1 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "resolve-linux-source: unknown option: $1" >&2; exit 2 ;;
   esac
@@ -28,7 +42,7 @@ done
 
 [[ -n "$OUTPUT" ]] || { echo "resolve-linux-source: output path is empty" >&2; exit 2; }
 
-for command in curl dpkg-deb gpg gpgv base64 python3 sha256sum stat; do
+for command in curl dpkg-deb gpg gpgv python3 sha256sum stat; do
   command -v "$command" >/dev/null 2>&1 || {
     echo "resolve-linux-source: missing command: $command" >&2
     exit 2
@@ -38,39 +52,83 @@ done
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
-curl -fsSL --retry 3 "$LATEST_URL" -o "$workdir/chatgpt.deb"
-dpkg-deb -e "$workdir/chatgpt.deb" "$workdir/control"
+[[ "$EXPECTED_FINGERPRINT" =~ ^[0-9A-F]{40}$ ]] || {
+  echo "resolve-linux-source: invalid approved fingerprint" >&2
+  exit 1
+}
+[[ -f "$TRUSTED_KEY" ]] || { echo "resolve-linux-source: trusted repository key not found" >&2; exit 1; }
 
-key_base64="$(sed -n "s/^SIGNING_KEY_BASE64='\(.*\)'$/\1/p" "$workdir/control/postinst")"
-[[ -n "$key_base64" ]] || { echo "resolve-linux-source: repository key not found" >&2; exit 1; }
-printf '%s' "$key_base64" | base64 -d > "$workdir/repository.gpg"
-
-fingerprint="$(gpg --batch --show-keys --with-colons "$workdir/repository.gpg" | awk -F: '$1 == "fpr" { print $10; exit }')"
-[[ "$fingerprint" == "$EXPECTED_FINGERPRINT" ]] || {
-  echo "resolve-linux-source: repository key fingerprint mismatch" >&2
+mkdir -m 0700 "$workdir/gnupg"
+gpg --batch --homedir "$workdir/gnupg" --import-options import-minimal \
+  --import "$TRUSTED_KEY" >/dev/null 2>&1 || {
+  echo "resolve-linux-source: trusted repository key is invalid" >&2
   exit 1
 }
 
-curl -fsSL --retry 3 "$REPO_BASE/dists/stable/InRelease" -o "$workdir/InRelease"
-curl -fsSL --retry 3 "$REPO_BASE/dists/stable/main/binary-amd64/Packages.gz" -o "$workdir/Packages.gz"
-gpgv --keyring "$workdir/repository.gpg" "$workdir/InRelease" >/dev/null
+mapfile -t primary_fingerprints < <(
+  gpg --batch --homedir "$workdir/gnupg" --with-colons --list-keys |
+    awk -F: '$1 == "pub" { primary = 1; next } primary && $1 == "fpr" { print toupper($10); primary = 0 }'
+)
+[[ "${#primary_fingerprints[@]}" -eq 1 && "${primary_fingerprints[0]}" == "$EXPECTED_FINGERPRINT" ]] || {
+  echo "resolve-linux-source: trusted keyring contains an unauthorized primary key" >&2
+  exit 1
+}
 
-mapfile -t metadata < <(python3 - "$workdir/InRelease" "$workdir/Packages.gz" <<'PY'
+mapfile -t allowed_fingerprints < <(
+  gpg --batch --homedir "$workdir/gnupg" --with-colons --list-keys "$EXPECTED_FINGERPRINT" |
+    awk -F: '$1 == "fpr" { print toupper($10) }'
+)
+gpg --batch --homedir "$workdir/gnupg" --export "$EXPECTED_FINGERPRINT" > "$workdir/repository.gpg"
+[[ -s "$workdir/repository.gpg" ]] || { echo "resolve-linux-source: approved repository key export failed" >&2; exit 1; }
+
+if [[ "$VERIFY_CACHE" == 1 ]]; then
+  cp -- "$OUTPUT.InRelease" "$workdir/InRelease"
+else
+  curl -fsSL --retry 3 "$REPO_BASE/dists/stable/InRelease" -o "$workdir/InRelease"
+fi
+mkdir -m 0700 "$workdir/gpgv-home"
+if ! gpgv --homedir "$workdir/gpgv-home" --status-fd=1 --keyring "$workdir/repository.gpg" \
+  --output "$workdir/Release" "$workdir/InRelease" \
+  > "$workdir/gpgv.status" 2> "$workdir/gpgv.error"; then
+  echo "resolve-linux-source: InRelease signature verification failed" >&2
+  exit 1
+fi
+
+signer_fingerprint="$(awk '$2 == "VALIDSIG" { print toupper($3); exit }' "$workdir/gpgv.status")"
+signer_allowed=false
+for fingerprint in "${allowed_fingerprints[@]}"; do
+  if [[ "$signer_fingerprint" == "$fingerprint" ]]; then
+    signer_allowed=true
+    break
+  fi
+done
+[[ "$signer_allowed" == true ]] || {
+  echo "resolve-linux-source: InRelease signer is not authorized" >&2
+  exit 1
+}
+
+if [[ "$VERIFY_CACHE" == 1 ]]; then
+  cp -- "$OUTPUT.Packages.gz" "$workdir/Packages.gz"
+else
+  curl -fsSL --retry 3 "$REPO_BASE/dists/stable/main/binary-amd64/Packages.gz" -o "$workdir/Packages.gz"
+fi
+
+python3 - "$workdir/Release" "$workdir/Packages.gz" > "$workdir/metadata" <<'PY'
 import gzip
 import hashlib
 import pathlib
 import re
 import sys
 
-inrelease = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+release = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
 packages_path = pathlib.Path(sys.argv[2])
 packages_bytes = packages_path.read_bytes()
 index_path = "main/binary-amd64/Packages.gz"
 
-match = re.search(rf"^ ([0-9a-f]{{64}})\s+(\d+)\s+{re.escape(index_path)}$", inrelease, re.MULTILINE)
-if not match:
+matches = re.findall(rf"^ ([0-9a-f]{{64}})\s+(\d+)\s+{re.escape(index_path)}$", release, re.MULTILINE)
+if len(matches) != 1:
     raise SystemExit("resolve-linux-source: Packages.gz checksum is missing from InRelease")
-expected_hash, expected_size = match.groups()
+expected_hash, expected_size = matches[0]
 if hashlib.sha256(packages_bytes).hexdigest() != expected_hash or len(packages_bytes) != int(expected_size):
     raise SystemExit("resolve-linux-source: Packages.gz does not match signed metadata")
 
@@ -103,17 +161,35 @@ print(filename)
 print(sha256)
 print(size)
 PY
-)
+mapfile -t metadata < "$workdir/metadata"
 
 version="${metadata[0]}"
 filename="${metadata[1]}"
 expected_sha="${metadata[2]}"
 expected_size="${metadata[3]}"
+source_url="$REPO_BASE/$filename"
+if [[ "$METADATA_ONLY" == 1 ]]; then
+  cp -- "$workdir/InRelease" "$OUTPUT.InRelease"
+  cp -- "$workdir/Packages.gz" "$OUTPUT.Packages.gz"
+  if [[ -n "$GITHUB_OUTPUT_FILE" ]]; then
+    { echo "version=$version"; echo "source_url=$source_url"; echo "source_sha=$expected_sha"; } >> "$GITHUB_OUTPUT_FILE"
+  fi
+  echo "resolve-linux-source: verified signed metadata for chatgpt $version ($expected_sha); package not downloaded"
+  exit
+fi
+if [[ -f "$OUTPUT" && "$(sha256sum "$OUTPUT" | awk '{print $1}')" == "$expected_sha" && "$(stat -c %s "$OUTPUT")" == "$expected_size" ]]; then
+  cp -- "$OUTPUT" "$workdir/chatgpt.deb"
+elif [[ "$VERIFY_CACHE" == 1 && "$ALLOW_CACHED_DOWNLOAD" == 0 ]]; then
+  echo "resolve-linux-source: cached source does not match signed metadata" >&2
+  exit 1
+else
+  curl -fsSL --retry 3 "$REPO_BASE/$filename" -o "$workdir/chatgpt.deb"
+fi
 actual_sha="$(sha256sum "$workdir/chatgpt.deb" | awk '{print $1}')"
 actual_size="$(stat -c '%s' "$workdir/chatgpt.deb")"
 
 [[ "$actual_sha" == "$expected_sha" && "$actual_size" == "$expected_size" ]] || {
-  echo "resolve-linux-source: latest package does not match signed repository metadata" >&2
+  echo "resolve-linux-source: package does not match signed repository metadata" >&2
   exit 1
 }
 [[ "$(dpkg-deb -f "$workdir/chatgpt.deb" Package)" == "chatgpt" ]] || exit 1
@@ -122,6 +198,19 @@ actual_size="$(stat -c '%s' "$workdir/chatgpt.deb")"
 
 mv "$workdir/chatgpt.deb" "$OUTPUT"
 source_url="$REPO_BASE/$filename"
+cp -- "$workdir/InRelease" "$OUTPUT.InRelease"
+cp -- "$workdir/Packages.gz" "$OUTPUT.Packages.gz"
+python3 - "$OUTPUT.verification.json" "$EXPECTED_FINGERPRINT" "$signer_fingerprint" "$expected_sha" "$workdir/InRelease" "$workdir/Packages.gz" "$source_url" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+output, anchor, signer, source_sha, release, index, source_url = sys.argv[1:]
+proof = {"status": "verified-signed-apt", "primaryFingerprint": anchor, "signerFingerprint": signer, "sourceSha256": source_sha,
+         "inReleaseSha256": hashlib.sha256(pathlib.Path(release).read_bytes()).hexdigest(),
+         "packagesIndexSha256": hashlib.sha256(pathlib.Path(index).read_bytes()).hexdigest(), "sourceUrl": source_url}
+pathlib.Path(output).write_text(json.dumps(proof, sort_keys=True) + "\n", encoding="utf-8")
+PY
 
 if [[ -n "$GITHUB_OUTPUT_FILE" ]]; then
   {

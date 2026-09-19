@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+candidate="${1:?disposable runtime directory required}"
+for prerequisite in bwrap Xvfb xdotool timeout realpath; do
+  command -v "$prerequisite" >/dev/null || { echo "smoke-linux-candidate: NOT_RUN missing $prerequisite" >&2; exit 2; }
+done
+candidate="$(realpath "$candidate")"
+[[ "$candidate" == /tmp/* && -x "$candidate/ChatGPT" ]] || { echo "smoke-linux-candidate: only disposable /tmp candidates are accepted" >&2; exit 2; }
+evidence_binds=()
+evidence_enabled=0
+if [[ -n "${CODEX_LAB_SMOKE_EVIDENCE_DIR:-}" ]]; then
+  evidence="$CODEX_LAB_SMOKE_EVIDENCE_DIR"
+  [[ "$evidence" == /tmp/* && -d "$evidence" && ! -L "$evidence" && ! -e "$evidence/native-window.png" ]] || exit 2
+  evidence="$(realpath "$evidence")"
+  [[ "$evidence" == /tmp/* ]] || exit 2
+  command -v import >/dev/null || { echo 'smoke-linux-candidate: NOT_RUN missing optional screenshot tool' >&2; exit 2; }
+  evidence_binds=(--bind "$evidence" /tmp/evidence)
+  evidence_enabled=1
+fi
+
+# No host home, account, network, desktop socket or sandbox-disabling flags.
+set +e
+# shellcheck disable=SC2016 # Variables deliberately expand inside the isolated shell.
+output="$(timeout -k 5s 20s bwrap --unshare-all --die-with-parent --new-session \
+  --ro-bind / / --tmpfs /tmp --tmpfs /home --tmpfs /root --tmpfs /run \
+  "${evidence_binds[@]}" \
+  --dev /dev --proc /proc --ro-bind "$candidate" /tmp/candidate \
+  --clearenv --setenv PATH /usr/bin --setenv HOME /tmp/home \
+  --setenv LANG en_US.UTF-8 --setenv DISPLAY :99 \
+  --setenv XDG_CONFIG_HOME /tmp/config --setenv XDG_DATA_HOME /tmp/data \
+  --setenv XDG_CACHE_HOME /tmp/cache --setenv CODEX_HOME /tmp/codex \
+  --setenv XDG_RUNTIME_DIR /tmp/runtime --setenv SMOKE_EVIDENCE "$evidence_enabled" /usr/bin/bash -c '
+    ulimit -c 0
+    mkdir -m 700 -p /tmp/home /tmp/config /tmp/data /tmp/cache /tmp/codex /tmp/runtime
+    # GLX is unnecessary for this software-only headless test and crashes on this host.
+    Xvfb :99 -screen 0 1024x768x24 -nolisten tcp -extension GLX >/tmp/xvfb.log 2>&1 &
+    display_pid=$!
+    trap '\''kill "$display_pid" 2>/dev/null || true'\'' EXIT
+    for attempt in {1..20}; do
+      kill -0 "$display_pid" 2>/dev/null || { echo DISPOSABLE_XVFB_FAILED; tail -n 15 /tmp/xvfb.log; exit 1; }
+      xdotool getdisplaygeometry >/dev/null 2>&1 && break
+      sleep 0.1
+    done
+    /tmp/candidate/ChatGPT --ozone-platform=x11 --disable-dev-shm-usage --disable-gpu --user-data-dir=/tmp/profile >/tmp/runtime.log 2>&1 &
+    runtime_pid=$!
+    for attempt in {1..30}; do
+      kill -0 "$runtime_pid" 2>/dev/null || { echo RUNTIME_EXITED_BEFORE_WINDOW; tail -n 15 /tmp/runtime.log; exit 1; }
+      if xdotool search --onlyvisible --name '\''^(Codex|ChatGPT)'\'' >/dev/null 2>&1; then
+        if [[ "$SMOKE_EVIDENCE" == 1 ]]; then
+          sleep 2
+          import -window root /tmp/evidence/native-window.png || exit 1
+        fi
+        echo ANONYMOUS_CANDIDATE_WINDOW_OBSERVED
+        wait "$runtime_pid"
+        exit
+      fi
+      sleep 0.3
+    done
+    echo NO_CANDIDATE_WINDOW_OBSERVED
+    exit 1
+  ' 2>&1)"
+result=$?
+set -e
+if [[ "$result" == 124 && "$output" == *ANONYMOUS_CANDIDATE_WINDOW_OBSERVED* ]]; then
+  echo "smoke-linux-candidate: PASS anonymous software X11 window, network/home isolated, native sandbox retained"
+else
+  echo "smoke-linux-candidate: FAIL isolated startup (status $result)" >&2
+  printf '%s\n' "$output" >&2
+  exit 1
+fi

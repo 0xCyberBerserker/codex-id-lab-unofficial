@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FORMAT="${1:?package format required}"
+PACKAGE="${2:?package path required}"
+VERSION="${3:?upstream version required}"
+REVISION="${4:?packaging revision required}"
+SOURCE_PACKAGE="${5:?source package required}"
+NAME="codex-id-lab-unofficial"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+fail() {
+  echo "validate-package: $*" >&2
+  exit 1
+}
+
+[[ -s "$PACKAGE" ]] || fail "missing or empty package: $PACKAGE"
+[[ -s "$SOURCE_PACKAGE" ]] || fail "missing or empty source package: $SOURCE_PACKAGE"
+
+workdir="$(mktemp -d)"
+trap 'rm -rf "$workdir"' EXIT
+payload="$workdir/payload"
+source_root="$workdir/source"
+mkdir -p "$payload" "$source_root"
+
+case "$FORMAT" in
+  arch)
+    command -v bsdtar >/dev/null 2>&1 || fail "bsdtar is required"
+    bsdtar -cf - "@$PACKAGE" | "$ROOT/scripts/validate-tar-ownership" || fail "Arch package ownership is not root:root"
+    metadata="$(bsdtar -xOf "$PACKAGE" .PKGINFO)" || fail "invalid Arch package"
+    grep -Fxq "pkgname = $NAME" <<< "$metadata" || fail "Arch package name mismatch"
+    grep -Fxq "pkgver = $VERSION-$REVISION" <<< "$metadata" || fail "Arch package version mismatch"
+    grep -Fxq "arch = x86_64" <<< "$metadata" || fail "Arch package architecture mismatch"
+    grep -Fxq "depend = github-cli" <<< "$metadata" || fail "Arch package misses github-cli"
+    bsdtar -xf "$PACKAGE" -C "$payload" || fail "invalid Arch payload"
+    ;;
+  deb)
+    command -v dpkg-deb >/dev/null 2>&1 || fail "dpkg-deb is required"
+    dpkg-deb --fsys-tarfile "$PACKAGE" | "$ROOT/scripts/validate-tar-ownership" || fail "Debian package payload ownership is not root:root"
+    dpkg-deb --ctrl-tarfile "$PACKAGE" | "$ROOT/scripts/validate-tar-ownership" || fail "Debian package control ownership is not root:root"
+    [[ "$(dpkg-deb -f "$PACKAGE" Package)" == "$NAME" ]] || fail "Debian package name mismatch"
+    [[ "$(dpkg-deb -f "$PACKAGE" Version)" == "$VERSION-$REVISION" ]] || fail "Debian package version mismatch"
+    [[ "$(dpkg-deb -f "$PACKAGE" Architecture)" == "amd64" ]] || fail "Debian package architecture mismatch"
+    dpkg-deb -f "$PACKAGE" Depends | tr ',' '\n' | grep -Eq '^[[:space:]]*gh([[:space:]]|$)' || fail "Debian package misses gh"
+    dpkg-deb -x "$PACKAGE" "$payload" || fail "invalid Debian payload"
+    ;;
+  rpm)
+    command -v rpm >/dev/null 2>&1 || fail "rpm is required"
+    command -v rpm2cpio >/dev/null 2>&1 || fail "rpm2cpio is required"
+    command -v cpio >/dev/null 2>&1 || fail "cpio is required"
+    rpm -qp --qf '[%{FILEUSERNAME} %{FILEGROUPNAME}\n]' "$PACKAGE" 2>/dev/null | awk '$0 != "root root" {exit 1}' || fail "RPM package ownership is not root:root"
+    [[ "$(rpm -qp --qf '%{NAME}' "$PACKAGE" 2>/dev/null)" == "$NAME" ]] || fail "RPM package name mismatch"
+    [[ "$(rpm -qp --qf '%{VERSION}-%{RELEASE}' "$PACKAGE" 2>/dev/null)" == "$VERSION-$REVISION" ]] || fail "RPM package version mismatch"
+    [[ "$(rpm -qp --qf '%{ARCH}' "$PACKAGE" 2>/dev/null)" == "x86_64" ]] || fail "RPM package architecture mismatch"
+    rpm -qp --requires "$PACKAGE" 2>/dev/null | grep -Fxq gh || fail "RPM package misses gh"
+    # Drain archive padding after cpio's trailer so pipefail does not report a
+    # false SIGPIPE from rpm2cpio. Both decoder and extractor still must succeed.
+    rpm2cpio "$PACKAGE" 2>/dev/null | (cd "$payload" && cpio -id --quiet && cat >/dev/null) || fail "invalid RPM payload"
+    ;;
+  *) fail "unsupported package format: $FORMAT" ;;
+esac
+
+app="$payload/opt/$NAME"
+for executable in "$app/ChatGPT" "$app/resources/codex" "$app/bin/codex-lab" "$app/bin/codex-lab-install" "$app/bin/codex-lab-tools"; do
+  [[ -x "$executable" ]] || fail "missing executable: ${executable#"$payload/"}"
+done
+[[ -f "$app/resources/app.asar" ]] || fail "missing upstream app.asar"
+[[ "$("$ROOT/scripts/payload-digest" "$app")" == "$(jq -r '.payloadSha256' "$app/manifest.json")" ]] || fail "installed application payload digest mismatch"
+[[ "$(stat -c %a "$app/manifest.json")" == "644" ]] || fail "installed manifest permissions mismatch"
+
+declare -A links=(
+  [codex-lab]="/opt/$NAME/bin/codex-lab"
+  [codex-lab-install]="/opt/$NAME/bin/codex-lab-install"
+  [codex-lab-update]="/opt/$NAME/bin/codex-lab-update"
+  [codex-lab-tools]="/opt/$NAME/bin/codex-lab-tools"
+)
+for link in "${!links[@]}"; do
+  [[ -L "$payload/usr/bin/$link" ]] || fail "missing launcher symlink: $link"
+  [[ "$(readlink "$payload/usr/bin/$link")" == "${links[$link]}" ]] || fail "launcher symlink target mismatch: $link"
+done
+
+for desktop in codex-lab.desktop codex-lab-tools.desktop; do
+  desktop_path="$payload/usr/share/applications/$desktop"
+  [[ -f "$desktop_path" ]] || fail "missing desktop entry: $desktop"
+  if command -v desktop-file-validate >/dev/null 2>&1; then
+    desktop-file-validate "$desktop_path" || fail "invalid desktop entry: $desktop"
+  else
+    grep -Fxq 'Type=Application' "$desktop_path" || fail "invalid desktop entry type: $desktop"
+    grep -Eq '^Exec=codex-lab' "$desktop_path" || fail "invalid desktop entry command: $desktop"
+  fi
+done
+
+dpkg-deb -x "$SOURCE_PACKAGE" "$source_root" || fail "invalid source package"
+upstream="$source_root/usr/lib/chatgpt"
+[[ -d "$upstream" ]] || fail "source package misses upstream runtime"
+while IFS= read -r -d '' source_path; do
+  relative="${source_path#"$upstream/"}"
+  target="$app/$relative"
+  if [[ -L "$source_path" ]]; then
+    [[ -L "$target" && "$(readlink "$target")" == "$(readlink "$source_path")" ]] || fail "upstream symlink changed: $relative"
+  elif [[ -f "$source_path" ]]; then
+    [[ -f "$target" ]] || fail "upstream file missing: $relative"
+    cmp -s "$source_path" "$target" || fail "upstream file changed: $relative"
+    [[ "$(stat -c %a "$source_path")" == "$(stat -c %a "$target")" ]] || fail "upstream mode changed: $relative"
+  elif [[ -d "$source_path" ]]; then
+    [[ -d "$target" ]] || fail "upstream directory missing: $relative"
+  else
+    fail "unsupported upstream entry: $relative"
+  fi
+done < <(find "$upstream" -mindepth 1 -print0)
+
+echo "validate-package: $FORMAT package structure is valid"

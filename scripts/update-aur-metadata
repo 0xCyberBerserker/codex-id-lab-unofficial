@@ -3,19 +3,33 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-}"
+REVISION="${2:-$(tr -d '[:space:]' < "$ROOT/packaging/revision")}"
 PKGBUILD="$ROOT/packaging/aur/PKGBUILD"
+ARCHIVE="${3:-}"
 
-if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: scripts/update-aur-metadata VERSION" >&2
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$REVISION" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Usage: scripts/update-aur-metadata VERSION REVISION VERIFIED_ARCH_ARCHIVE" >&2
   exit 2
 fi
+[[ -s "$ARCHIVE" ]] || { echo 'update-aur-metadata: a validated Arch archive is required; SKIP checksums are forbidden' >&2; exit 2; }
+metadata="$(bsdtar -xOf "$ARCHIVE" .PKGINFO)"
+grep -Fxq 'pkgname = codex-id-lab-unofficial' <<< "$metadata"
+grep -Fxq "pkgver = $VERSION-$REVISION" <<< "$metadata"
+grep -Fxq 'arch = x86_64' <<< "$metadata"
+embedded="$(bsdtar -xOf "$ARCHIVE" opt/codex-id-lab-unofficial/manifest.json)"
+jq -e '.sourceVerification.status == "verified-signed-apt"' <<< "$embedded" >/dev/null
+if [[ "${CODEX_LAB_AUR_LOCAL_CANDIDATE:-0}" != 1 ]]; then
+  jq -e '.buildProfile == "release"' <<< "$embedded" >/dev/null
+fi
+package_sha="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 
 sed -i "s/^pkgver=.*/pkgver=${VERSION}/" "$PKGBUILD"
-sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD"
+sed -i "s/^pkgrel=.*/pkgrel=${REVISION}/" "$PKGBUILD"
+sed -i "s/^sha256sums=.*/sha256sums=('${package_sha}')/" "$PKGBUILD"
 
 pushd "$ROOT/packaging/aur" >/dev/null
 makepkg --printsrcinfo > .SRCINFO
 popd >/dev/null
 
 "$ROOT/scripts/privacy-audit"
-echo "update-aur-metadata: refreshed $VERSION"
+echo "update-aur-metadata: refreshed $VERSION-$REVISION"

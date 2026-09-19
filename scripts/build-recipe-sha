@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-mapfile -d '' files < <(git ls-files -z --cached --others --exclude-standard -- scripts packaging resources tools | while IFS= read -r -d '' file; do
+mapfile -d '' files < <(git ls-files -z --cached --others --exclude-standard -- .github/workflows/release.yml scripts packaging resources tools linux-features third-party LICENSE NOTICE.md DISCLAIMER.md | while IFS= read -r -d '' file; do
+  # AUR metadata consumes final package hashes; it is not an input to those packages.
+  [[ "$file" == packaging/aur/* ]] && continue
   [[ -f "$file" ]] && printf '%s\0' "$file"
 done)
 [[ "${#files[@]}" -gt 0 ]] || { echo "build-recipe-sha: no build inputs found" >&2; exit 1; }

@@ -1,6 +1,7 @@
+%global __os_install_post %{nil}
 Name: codex-id-lab-unofficial
 Version: @VERSION@
-Release: 1
+Release: @REVISION@
 Summary: Codex I+D Lab - Unofficial
 License: Custom
 BuildArch: x86_64
@@ -9,6 +10,7 @@ Obsoletes: codex-ui-linux-port
 Requires: nodejs
 Requires: curl
 Requires: jq
+Requires: gh
 Requires: desktop-file-utils
 Requires: alsa-lib
 Requires: at-spi2-core
@@ -33,12 +35,12 @@ Requires: nspr
 Requires: nss
 Requires: pango
 Requires: xdg-utils
-Requires: python3-pyside6
-Requires: spectacle
-Requires: tesseract
-Requires: tesseract-langpack-eng
-Requires: tesseract-langpack-spa
-Requires: zbar
+Suggests: python3-pyside6
+Suggests: spectacle
+Suggests: tesseract
+Suggests: tesseract-langpack-eng
+Suggests: tesseract-langpack-spa
+Suggests: zbar
 
 %description
 Unofficial packaging automation for the official ChatGPT Linux runtime.
@@ -49,7 +51,7 @@ Unofficial packaging automation for the official ChatGPT Linux runtime.
 
 %install
 mkdir -p %{buildroot}
-tar -xf %{_sourcedir}/codex-id-lab-unofficial-%{version}-payload.tar -C %{buildroot}
+tar -xf %{_sourcedir}/codex-id-lab-unofficial-%{version}-%{release}-payload.tar -C %{buildroot}
 
 %files
 /opt/codex-id-lab-unofficial

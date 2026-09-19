@@ -1,0 +1,31 @@
+{
+  "id": "global-dictation",
+  "title": "global-dictation",
+  "description": "Disabled experimental integration preflight; not a stable feature.",
+  "defaultEnabled": false,
+  "entrypoints": {"patchDescriptors": "patch.js"},
+  "lab": {
+    "capabilities": [
+      "global-shortcut-portal",
+      "microphone",
+      "explicit-paste"
+    ],
+    "stability": "experimental",
+    "tests": [
+      "node --test tests/runtime-features.test.js",
+      "tools/global-dictation/test-isolated TEMP_CARGO_CACHE"
+    ],
+    "compatibility": {
+      "asarSha256": [
+        "6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"
+      ]
+    },
+    "source": {
+      "repository": "https://github.com/ilysenko/codex-desktop-linux",
+      "commit": "249cd4b64d42434f51417fec4a318750d461b676",
+      "license": "MIT",
+      "imported": true
+    },
+    "acceptancePending": "Wayland portal mocks pass; real shortcut permission, microphone, release/cancellation and authenticated dictation acceptance are NOT_RUN. X11 intentionally unavailable."
+  }
+}

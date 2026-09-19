@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Calculate a deterministic digest for a prepared application payload."""
+
+from __future__ import annotations
+
+import hashlib
+import os
+from pathlib import Path
+import stat
+import sys
+
+
+def add_field(digest: "hashlib._Hash", value: bytes) -> None:
+    digest.update(len(value).to_bytes(8, "big"))
+    digest.update(value)
+
+
+def payload_digest(root: Path) -> str:
+    if not root.is_dir():
+        raise ValueError(f"payload root is not a directory: {root}")
+
+    digest = hashlib.sha256()
+    entries = sorted(root.rglob("*"), key=lambda path: path.relative_to(root).as_posix())
+    for path in entries:
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        # Embedded identity is authenticated by the final artifact, not by its own digest.
+        if relative == b"manifest.json":
+            continue
+        metadata = path.lstat()
+        mode = f"{stat.S_IMODE(metadata.st_mode):04o}".encode("ascii")
+        if path.is_symlink():
+            kind = b"symlink"
+            content = os.readlink(path).encode("utf-8")
+        elif path.is_file():
+            kind = b"file"
+            content = hashlib.sha256(path.read_bytes()).digest()
+        elif path.is_dir():
+            kind = b"directory"
+            content = b""
+        else:
+            raise ValueError(f"unsupported payload entry: {path}")
+        for field in (kind, mode, relative, content):
+            add_field(digest, field)
+    return digest.hexdigest()
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: scripts/payload-digest PAYLOAD_ROOT", file=sys.stderr)
+        return 2
+    try:
+        print(payload_digest(Path(sys.argv[1])))
+    except (OSError, ValueError) as error:
+        print(f"payload-digest: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

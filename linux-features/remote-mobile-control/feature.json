@@ -1,0 +1,29 @@
+{
+  "id": "remote-mobile-control",
+  "title": "remote-mobile-control",
+  "description": "Disabled experimental integration preflight; not a stable feature.",
+  "defaultEnabled": false,
+  "lab": {
+    "capabilities": [
+      "account-entitlement",
+      "pairing",
+      "revocation"
+    ],
+    "stability": "experimental",
+    "tests": [
+      "node --test tests/lab-features.test.js"
+    ],
+    "compatibility": {
+      "asarSha256": [
+        "6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"
+      ]
+    },
+    "source": {
+      "repository": "https://github.com/ilysenko/codex-desktop-linux",
+      "commit": "249cd4b64d42434f51417fec4a318750d461b676",
+      "license": "MIT",
+      "imported": false
+    },
+    "blockedReason": "Two main-bundle contracts match. Account entitlement, keychain-backed device keys, consent, pairing and revocation are NOT_RUN. No network listener or remote-control flags are installed."
+  }
+}

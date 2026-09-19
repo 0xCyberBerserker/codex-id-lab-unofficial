@@ -39,6 +39,15 @@ unit_dir="$config_home/systemd/user"
 
 install -d -m 755 "$bin_dir" "$app_dir" "$applications_dir" "$icons_dir" "$unit_dir"
 install -m 755 "$ROOT/scripts/codex-lab-companion.py" "$app_dir/codex-lab-companion.py"
+install -m 644 "$ROOT/scripts/codex_lab_account.py" "$app_dir/codex_lab_account.py"
+install -m 644 "$ROOT/scripts/codex_lab_features.py" "$app_dir/codex_lab_features.py"
+python3 - "$ROOT/linux-features" "$app_dir/feature-catalog.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+root, output = map(Path, sys.argv[1:])
+output.write_text(json.dumps([json.loads(path.read_text()) for path in sorted(root.glob("*/feature.json"))], indent=2) + "\n", encoding="utf-8")
+PY
 install -m 644 "$ROOT/resources/codex-lab-tools.desktop" "$applications_dir/codex-lab-tools.desktop"
 install -m 644 "$ROOT/docs/assets/codex-lab.svg" "$icons_dir/codex-lab.svg"
 

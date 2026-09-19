@@ -1,0 +1,6 @@
+{
+  "id": "experimental-capture-speech",
+  "enabled": ["appshots", "read-aloud"],
+  "settings": {},
+  "runtimePatches": true
+}

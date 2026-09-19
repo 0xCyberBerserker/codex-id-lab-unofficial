@@ -1,0 +1,14 @@
+{
+  "id": "appshots",
+  "title": "Linux AppShots",
+  "description": "Experimental upstream composer integration; no global key monitor is installed.",
+  "defaultEnabled": false,
+  "entrypoints": {"patchDescriptors": "./patch.js"},
+  "lab": {
+    "capabilities": ["user-requested-window-capture", "accessibility-context"],
+    "stability": "experimental",
+    "tests": ["node --test tests/runtime-features.test.js"],
+    "compatibility": {"asarSha256": ["6c371cc96c2cf201c0777ddd54085f156efbb5347cbb21667cd8e67ec1bb36d3"]},
+    "blockers": ["Authenticated insertion, cancellation and compositor permissions have not been tested.", "Requires an explicitly installed official Linux Computer Use backend."]
+  }
+}

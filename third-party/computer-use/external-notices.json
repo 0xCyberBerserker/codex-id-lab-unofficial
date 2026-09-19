@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "notices": [
+    {
+      "name": "rmcp",
+      "version": "1.8.0",
+      "checksum": "1d1f571c72940a19d9532fe52dbea8bc9912bf1d766c2970bb824056b86f3f59",
+      "license": "Apache-2.0",
+      "file": "rmcp-UPSTREAM-LICENSE.txt",
+      "sha256": "0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a",
+      "sourceUrl": "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/25220361d5540715294c501c289d79de4bec2bfc/LICENSE"
+    },
+    {
+      "name": "rmcp-macros",
+      "version": "1.8.0",
+      "checksum": "1aad0035b69380782d78ea95b508327e6deaa2235909053e596eea8f27b5e1d5",
+      "license": "Apache-2.0",
+      "file": "rmcp-UPSTREAM-LICENSE.txt",
+      "sha256": "0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a",
+      "sourceUrl": "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/25220361d5540715294c501c289d79de4bec2bfc/LICENSE"
+    }
+  ]
+}

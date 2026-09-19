@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "runtimeRepository": "https://github.com/AppImage/type2-runtime",
+  "runtimeCommit": "75849dce7cc37e4319b633df1f116ca895c71a12",
+  "runtimeSha256": "1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf",
+  "reviewedRecipe": {
+    "source": "scripts/common/install-dependencies.sh",
+    "sha256": "45cf79ad6570c75c1f06bcbb629e4d55fbc5c6b1d44e974bb6037b1c209ed170",
+    "linkRecipe": "src/runtime/Makefile",
+    "linkRecipeSha256": "71fd92c0e6c7c10ef5a932f5007e4dc61403ed471330e5841782b4233131b053"
+  },
+  "sourceArchivePinsDeclaredByRecipe": [
+    {
+      "component": "libfuse",
+      "version": "3.15.0",
+      "url": "https://github.com/libfuse/libfuse/releases/download/fuse-3.15.0/fuse-3.15.0.tar.xz",
+      "sha256": "70589cfd5e1cff7ccd6ac91c86c01be340b227285c5e200baa284e401eea2ca0",
+      "localPatch": "patches/libfuse/mount.c.diff",
+      "downloadVerification": "NOT_RUN"
+    },
+    {
+      "component": "squashfuse",
+      "version": "0.5.2",
+      "url": "https://github.com/vasi/squashfuse/archive/0.5.2.tar.gz",
+      "sha256": "db0238c5981dabbd80ee09ae15387f390091668ca060a7bc38047912491443d3",
+      "downloadVerification": "NOT_RUN"
+    }
+  ],
+  "staticLinkLibraries": ["squashfuse", "squashfuse_ll", "zstd", "z", "fuse3", "mimalloc"],
+  "systemBuildInputs": {
+    "base": "alpine:3.21",
+    "pinnedImageDigest": null,
+    "exactPackages": null,
+    "components": ["musl", "zstd", "zlib", "mimalloc", "clang"]
+  },
+  "sourceAndRelinkClosure": "BLOCKED",
+  "reason": "Reviewed recipe does not identify exact Alpine image/packages used for the signed binary or provide a complete source/relink-object closure. Runtime signature and wrapper MIT notice do not prove static-library redistribution obligations are satisfied.",
+  "hostExecution": "NONE"
+}

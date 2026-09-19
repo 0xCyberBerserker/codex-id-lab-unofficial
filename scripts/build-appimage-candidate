@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Build and parse a local-only AppImage; no host installation or network."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_SHA = "1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf"
+RUNTIME_SIZE = 944632
+SIGNER = "570C77ACEA40C0F1B758902CBF96CCA56490F695"
+RUNTIME_COMMIT = "75849dce7cc37e4319b633df1f116ca895c71a12"
+
+
+def digest(file):
+    value = hashlib.sha256()
+    with file.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+
+def verify_runtime(runtime):
+    if runtime.is_symlink() or digest(runtime) != RUNTIME_SHA:
+        raise ValueError("Pinned AppImage runtime digest mismatch")
+    with tempfile.TemporaryDirectory(prefix="codex-lab-appimage-key-") as temporary:
+        subprocess.run(["gpg", "--homedir", temporary, "--batch", "--import",
+                        str(ROOT / "resources/appimage-runtime-key.asc")], check=True, capture_output=True)
+        result = subprocess.run(["gpg", "--homedir", temporary, "--batch", "--status-fd=1",
+                                 "--verify", str(runtime) + ".sig", str(runtime)],
+                                check=True, capture_output=True, text=True)
+        signatures = [line.split() for line in result.stdout.splitlines() if line.startswith("[GNUPG:] VALIDSIG ")]
+        if len(signatures) != 1 or signatures[0][2] != SIGNER or signatures[0][-1] != SIGNER:
+            raise ValueError("AppImage runtime signer mismatch")
+
+
+def validate(image, manifest, source=None):
+    if digest(image) != manifest["sha256"] or image.stat().st_size != manifest["size"]:
+        raise ValueError("AppImage identity mismatch")
+    offset = manifest["runtimeSize"]
+    if offset != RUNTIME_SIZE:
+        raise ValueError("Unapproved AppImage runtime size")
+    with image.open("rb") as stream:
+        runtime = stream.read(offset)
+    if hashlib.sha256(runtime).hexdigest() != RUNTIME_SHA or runtime[:4] != b"\x7fELF" or runtime[8:11] != b"AI\x02":
+        raise ValueError("AppImage runtime prefix is invalid")
+    with tempfile.TemporaryDirectory(prefix="codex-lab-appimage-parse-") as temporary:
+        extracted = Path(temporary) / "root"
+        subprocess.run(["unsquashfs", "-no-progress", "-o", str(offset), "-d", str(extracted), str(image)],
+                       check=True, capture_output=True)
+        if not (extracted / "AppRun").is_file() or not (extracted / "codex-lab.desktop").is_file():
+            raise ValueError("AppImage entrypoints missing")
+        installed = extracted / "usr/lib/codex-id-lab-unofficial"
+        if source:
+            expected = {str(p.relative_to(source)) for p in source.rglob("*")}
+            actual = {str(p.relative_to(installed)) for p in installed.rglob("*")}
+            if actual != expected:
+                raise ValueError("AppImage changed the source payload file set")
+            for relative in expected:
+                before, after = source / relative, installed / relative
+                if before.is_symlink():
+                    if not after.is_symlink() or before.readlink() != after.readlink():
+                        raise ValueError("AppImage payload symlink changed")
+                elif before.is_file():
+                    if not after.is_file() or after.is_symlink() or digest(before) != digest(after):
+                        raise ValueError("AppImage payload bytes changed")
+                if before.lstat().st_mode & 0o7777 != after.lstat().st_mode & 0o7777:
+                    raise ValueError("AppImage payload permissions changed")
+    return {"status": "PASS", "scope": "ELF prefix, SquashFS parser and complete payload preservation; GUI NOT_RUN"}
+
+
+def build(app, runtime, output):
+    app = app.resolve(strict=True)
+    if not str(app).startswith("/tmp/"):
+        raise ValueError("A disposable /tmp candidate is required")
+    identity = json.loads((app / "manifest.json").read_text())
+    if identity.get("buildProfile") != "local-candidate" or identity.get("featureProfile") != "base":
+        raise ValueError("Only local-candidate/base AppImage builds are accepted")
+    verify_runtime(runtime)
+    sidecar = output.with_name(output.name + ".manifest.json")
+    parent = output.parent.resolve()
+    if parent != Path("/tmp") and not str(parent).startswith("/tmp/"):
+        raise ValueError("A disposable /tmp output directory is required")
+    if output.exists() or output.is_symlink() or sidecar.exists() or sidecar.is_symlink():
+        raise ValueError("Refusing to overwrite an AppImage candidate")
+    with tempfile.TemporaryDirectory(prefix="codex-lab-appimage-build-") as temporary:
+        directory = Path(temporary) / "AppDir"
+        payload = directory / "usr/lib/codex-id-lab-unofficial"
+        shutil.copytree(app, payload, symlinks=True)
+        for file in directory.rglob("*"):
+            if len(str(file.relative_to(directory)).encode()) > 900:
+                raise ValueError("Payload path exceeds the reviewed runtime extraction bound")
+        desktop = (app / "share/codex-lab.desktop").read_text().split("[Desktop Action ")[0]
+        desktop = "\n".join("Exec=AppRun %U" if line.startswith("Exec=") else line
+                            for line in desktop.splitlines() if not line.startswith("Actions=")) + "\n"
+        (directory / "codex-lab.desktop").write_text(desktop)
+        shutil.copy2(app / "share/icons/hicolor/scalable/apps/codex-lab.svg", directory / "codex-lab.svg")
+        shutil.copy2(ROOT / "third-party/appimage/LICENSE", directory / "APPIMAGE-RUNTIME-LICENSE")
+        apprun = directory / "AppRun"
+        apprun.write_text('''#!/usr/bin/env bash
+set -euo pipefail
+HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+unset CODEX_CI CODEX_SESSION_ID CODEX_THREAD_ID CODEX_MANAGED_BY_NPM
+DATA_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}/codex-id-lab-unofficial/appimage"
+export CODEX_ELECTRON_USER_DATA_PATH="${CODEX_ELECTRON_USER_DATA_PATH:-$DATA_ROOT}"
+exec "$HERE/usr/lib/codex-id-lab-unofficial/ChatGPT" "$@"
+''')
+        apprun.chmod(0o755)
+        squashfs = Path(temporary) / "payload.squashfs"
+        subprocess.run(["mksquashfs", str(directory), str(squashfs), "-noappend", "-all-root", "-no-xattrs",
+                        "-no-progress", "-processors", "2", "-comp", "gzip", "-mkfs-time", "0", "-all-time", "0"], check=True, capture_output=True)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with output.open("xb") as destination:
+            for file in (runtime, squashfs):
+                with file.open("rb") as stream:
+                    shutil.copyfileobj(stream, destination)
+        output.chmod(0o755)
+    manifest = {"schemaVersion": 1, "buildProfile": "local-candidate", "featureProfile": "base",
+                "packageVersion": identity["packageVersion"], "name": output.name,
+                "sha256": digest(output), "size": output.stat().st_size,
+                "runtimeSize": runtime.stat().st_size, "runtimeSha256": RUNTIME_SHA,
+                "runtimeSigner": SIGNER, "runtimeCommit": RUNTIME_COMMIT,
+                "buildRecipeSha256": identity["buildRecipeSha256"],
+                "acceptance": "format-only; GUI and cross-distribution compatibility NOT_RUN",
+                "redistribution": "BLOCKED pending static-library license/source obligations review"}
+    validate(output, manifest, app)
+    with sidecar.open("x") as stream:
+        stream.write(json.dumps(manifest, indent=2) + "\n")
+    return manifest
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--app-dir", type=Path, required=True)
+    parser.add_argument("--runtime", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    print(json.dumps(build(args.app_dir, args.runtime, args.output), indent=2))

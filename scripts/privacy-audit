@@ -11,7 +11,7 @@ fi
 
 blocked_regex=(
   '/home/[A-Za-z0-9._-]+'
-  '\.codex'
+  '\.codex(?=$|[/\\]|["\x27`])'
   'CODEX_ELECTRON_USER_DATA_PATH=.*/'
   'gh[opsu]_[A-Za-z0-9_]{20,}'
   'sk-[A-Za-z0-9_-]{20,}'

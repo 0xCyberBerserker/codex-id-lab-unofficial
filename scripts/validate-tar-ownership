@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Reject non-root UID/GID in a parsed, uncompressed package tar stream."""
+import sys
+import tarfile
+
+try:
+    count = 0
+    with tarfile.open(fileobj=sys.stdin.buffer, mode="r|") as archive:
+        for member in archive:
+            count += 1
+            if member.uid != 0 or member.gid != 0:
+                raise ValueError("Package member is not owned by root:root")
+    if not count:
+        raise ValueError("Package tar has no members")
+except (ValueError, tarfile.TarError) as error:
+    print(f"validate-tar-ownership: {error}", file=sys.stderr)
+    raise SystemExit(1)

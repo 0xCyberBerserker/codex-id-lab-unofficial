@@ -7,17 +7,200 @@ PROGRAM="codex-lab-install"
 MODE="install"
 FORCE=0
 SMOKE=0
+WAIT_CLOSE=0
+ALLOW_PROFILE_CHANGE=0
+ACCEPT_DATA_DOWNGRADE_RISK=0
+RECOVER=0
+RECOVERY_IDENTITY=""
+RECOVERY_SHA=""
 REQUESTED_VERSION=""
+
+# Durable metadata contains only release identity, digest and transition, never credentials.
+update_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/codex-id-lab-unofficial/updater"
+update_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/codex-id-lab-unofficial/candidates"
+update_active=0
+update_phase=""
+state_write() {
+  local phase="$1" identity="${2:-}" digest="${3:-}" temporary
+  temporary="$(mktemp "$update_state_dir/state.XXXXXX")"
+  jq -n --arg phase "$phase" --arg identity "$identity" --arg digest "$digest" \
+    --argjson timestamp "$(date +%s)" \
+    '{schemaVersion:1,phase:$phase,packageVersion:$identity,sha256:$digest,updatedAt:$timestamp,rollback:"package-manager-only; user-data-not-restored"}' > "$temporary"
+  chmod 600 "$temporary"
+  [[ ! -L "$update_state_dir/events.jsonl" ]] || { rm -f "$temporary"; return 1; }
+  jq -c . "$temporary" >> "$update_state_dir/events.jsonl"
+  mv -f -- "$temporary" "$update_state_dir/state.json"
+  update_phase="$phase"
+}
+
+runtime_is_open() {
+  local executable target
+  for executable in /proc/[0-9]*/exe; do
+    target="$(readlink "$executable" 2>/dev/null || true)"
+    case "$target" in
+      /opt/codex-id-lab-unofficial/ChatGPT|/opt/codex-ui-linux-port/ChatGPT) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+update_lock() {
+  umask 077
+  [[ ! -L "$update_state_dir" && ! -L "$update_cache_dir" ]] || { echo "$PROGRAM: unsafe update directory symlink" >&2; return 1; }
+  mkdir -p "$update_state_dir" "$update_cache_dir"
+  chmod 700 "$update_state_dir" "$update_cache_dir"
+  [[ ! -L "$update_state_dir/lock" && ! -L "$update_state_dir/state.json" ]] || return 1
+  exec 9>"$update_state_dir/lock"
+  flock -n 9 || { echo "$PROGRAM: another updater owns the installation" >&2; return 1; }
+  update_active=1
+}
+
+if [[ "${CODEX_LAB_UPDATE_STATE_TEST:-0}" == 1 ]]; then
+  update_lock
+  state_write "${CODEX_LAB_TEST_UPDATE_PHASE:?}" "${CODEX_LAB_TEST_UPDATE_IDENTITY:-}" "${CODEX_LAB_TEST_UPDATE_DIGEST:-}"
+  cat "$update_state_dir/state.json"
+  exit
+fi
+
+compare_release_identities() {
+  local left="$1" right="$2" index
+  local left_version="${left%-*}" right_version="${right%-*}"
+  local left_revision="${left##*-}" right_revision="${right##*-}"
+  local -a left_parts right_parts
+
+  [[ "$left" =~ ^[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}-[1-9][0-9]{0,8}$ ]] || return 2
+  [[ "$right" =~ ^[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}-[1-9][0-9]{0,8}$ ]] || return 2
+  IFS=. read -r -a left_parts <<< "$left_version"
+  IFS=. read -r -a right_parts <<< "$right_version"
+  for index in 0 1 2; do
+    if (( 10#${left_parts[$index]} < 10#${right_parts[$index]} )); then echo -1; return; fi
+    if (( 10#${left_parts[$index]} > 10#${right_parts[$index]} )); then echo 1; return; fi
+  done
+  if (( 10#$left_revision < 10#$right_revision )); then echo -1; return; fi
+  if (( 10#$left_revision > 10#$right_revision )); then echo 1; return; fi
+  echo 0
+}
+
+release_decision() {
+  local installed="$1" available="$2" explicit="$3" force="$4" migration="$5" comparison
+  [[ -z "$installed" ]] && { echo install; return; }
+  comparison="$(compare_release_identities "$installed" "$available")" || {
+    echo "$PROGRAM: invalid release identity" >&2
+    return 2
+  }
+  if [[ "$comparison" == 1 ]]; then
+    [[ "$explicit" == 1 ]] && echo downgrade || echo downgrade-blocked
+  elif [[ "$comparison" == 0 && "$force" == 0 && "$migration" == 0 ]]; then
+    echo current
+  else
+    echo install
+  fi
+}
+
+if [[ "${CODEX_LAB_INSTALL_IDENTITY_TEST:-0}" == 1 ]]; then
+  release_decision \
+    "${CODEX_LAB_TEST_INSTALLED_IDENTITY:-}" \
+    "${CODEX_LAB_TEST_AVAILABLE_IDENTITY:?}" \
+    "${CODEX_LAB_TEST_EXPLICIT:-0}" \
+    "${CODEX_LAB_TEST_FORCE:-0}" \
+    "${CODEX_LAB_TEST_MIGRATION:-0}"
+  exit
+fi
+
+compatibility_guard() {
+  local installed="$1" remote="$2" decision="$3" allow_profile="$4" accept_data="$5"
+  if ! jq -e 'type == "object"' "$remote" >/dev/null || { [[ -f "$installed" ]] && ! jq -e 'type == "object"' "$installed" >/dev/null; }; then
+    echo invalid-compatibility-metadata
+    return
+  fi
+  if [[ "$decision" == downgrade && "$accept_data" != 1 ]]; then
+    echo data-downgrade-risk-blocked
+    return
+  fi
+  if [[ -f "$installed" ]] && jq -e --slurpfile remote "$remote" '
+    (.featureProfile != null and .featureProfile != $remote[0].featureProfile) or
+    (.featureProfileSha256 != null and .featureProfileSha256 != $remote[0].featureProfileSha256)
+  ' "$installed" >/dev/null; then
+    [[ "$allow_profile" == 1 ]] && echo explicit-profile-change || echo profile-change-blocked
+  else
+    echo compatible-profile-data-schema-unknown
+  fi
+}
+
+if [[ "${CODEX_LAB_COMPATIBILITY_TEST:-0}" == 1 ]]; then
+  compatibility_guard "${CODEX_LAB_TEST_INSTALLED_MANIFEST:?}" "${CODEX_LAB_TEST_REMOTE_MANIFEST:?}" \
+    "${CODEX_LAB_TEST_DECISION:-install}" "${CODEX_LAB_TEST_ALLOW_PROFILE:-0}" "${CODEX_LAB_TEST_ACCEPT_DATA:-0}"
+  exit
+fi
+
+recovery_select() {
+  local record="$1"
+  [[ -f "$record" && ! -L "$record" && "$(stat -c %s "$record")" -le 16384 ]] || return 2
+  jq -ser '
+    select(length == 1) | .[0] |
+    select(type == "object" and .schemaVersion == 1 and
+      (.phase | IN("INSTALLING", "FAILED", "CANCELLED_OR_FAILED", "RECOVERY_BLOCKED", "VERIFIED", "DEFERRED")) and
+      (.packageVersion | type == "string" and test("^[0-9]{1,9}\\.[0-9]{1,9}\\.[0-9]{1,9}-[1-9][0-9]{0,8}$")) and
+      (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))) |
+    .packageVersion, .sha256
+  ' "$record"
+}
+
+recovery_match() {
+  [[ "$1" == "$3" && "$2" == "$4" ]]
+}
+
+manager_recovery_status() {
+  local kind="$1" database_root="${2:-/var/lib}" audit
+  case "$kind" in
+    pkg.tar.zst)
+      if [[ -e "$database_root/pacman/db.lck" || -L "$database_root/pacman/db.lck" ]]; then
+        echo pacman-lock-review-required
+      else
+        echo native-manager-validation-required
+      fi ;;
+    deb)
+      if ! command -v dpkg >/dev/null || ! command -v timeout >/dev/null; then
+        echo manager-probe-unavailable
+      elif ! audit="$(timeout 5s dpkg --audit "$PACKAGE_NAME" 2>/dev/null)" || [[ -n "$audit" ]]; then
+        echo dpkg-review-required
+      else
+        echo native-manager-validation-required
+      fi ;;
+    rpm) echo native-manager-validation-required ;;
+    *) echo manager-probe-unavailable ;;
+  esac
+}
+
+if [[ "${CODEX_LAB_RECOVERY_TEST:-0}" == 1 ]]; then
+  recovery_select "${CODEX_LAB_TEST_RECOVERY_STATE:?}"
+  exit
+fi
+if [[ "${CODEX_LAB_MANAGER_RECOVERY_TEST:-0}" == 1 ]]; then
+  manager_recovery_status "${CODEX_LAB_TEST_MANAGER_KIND:?}" "${CODEX_LAB_TEST_DATABASE_ROOT:?}"
+  exit
+fi
+if [[ "${CODEX_LAB_RECOVERY_MATCH_TEST:-0}" == 1 ]]; then
+  recovery_match "${CODEX_LAB_TEST_RECOVERY_IDENTITY:?}" "${CODEX_LAB_TEST_RECOVERY_SHA:?}" \
+    "${CODEX_LAB_TEST_REMOTE_IDENTITY:?}" "${CODEX_LAB_TEST_REMOTE_SHA:?}"
+  exit
+fi
 
 usage() {
   cat <<'EOF'
 Usage:
-  codex-lab-install [--check] [--force] [--version VERSION] [--smoke]
+  codex-lab-install [--check|--status|--doctor] [--force] [--version VERSION] [--smoke]
 
 Options:
   --check            Print current/latest versions without installing.
+  --status           Print sanitized local updater JSON without network access.
+  --doctor           Print local dependency/runtime diagnostics as JSON.
+  --wait             Wait for the app to close before package-manager installation.
   --force            Reinstall the selected release.
+  --recover          Re-authenticate and retry the exact retained failed/deferred candidate.
   --version VERSION  Install a specific release tag/version.
+  --allow-profile-change  Explicitly accept a changed build feature profile.
+  --accept-data-downgrade-risk  Allow explicit package downgrade without restoring user data.
   --smoke            Run a temporary-profile startup smoke test after install.
   --help             Show this help.
 EOF
@@ -26,7 +209,13 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) MODE="check" ;;
+    --status) MODE="status" ;;
+    --doctor) MODE="doctor" ;;
+    --wait) WAIT_CLOSE=1 ;;
     --force) FORCE=1 ;;
+    --recover) RECOVER=1; FORCE=1 ;;
+    --allow-profile-change) ALLOW_PROFILE_CHANGE=1 ;;
+    --accept-data-downgrade-risk) ACCEPT_DATA_DOWNGRADE_RISK=1 ;;
     --version)
       shift
       REQUESTED_VERSION="${1:-}"
@@ -43,11 +232,50 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if [[ "$RECOVER" == 1 && ( "$MODE" != install || -n "$REQUESTED_VERSION" ) ]]; then
+  echo "$PROGRAM: --recover requires install mode without --version; its target comes from the journal" >&2
+  exit 2
+fi
+
+if [[ "$MODE" == status ]]; then
+  if [[ -f "$update_state_dir/state.json" && ! -L "$update_state_dir/state.json" ]]; then
+    jq '{schemaVersion,phase,packageVersion,sha256,updatedAt,rollback}' "$update_state_dir/state.json"
+  else
+    printf '%s\n' '{"schemaVersion":1,"phase":"NONE","packageVersion":null}'
+  fi
+  exit
+fi
+if [[ "$MODE" == doctor ]]; then
+  missing_commands=()
+  for dependency in gh jq curl sha256sum flock; do
+    command -v "$dependency" >/dev/null 2>&1 || missing_commands+=("$dependency")
+  done
+  runtime_open=false
+  runtime_is_open && runtime_open=true
+  manager_kind=unknown
+  if [[ -r /etc/os-release ]]; then
+    # The root-owned OS identity selects diagnostics, never an executable command.
+    manager_ids="$(sed -n 's/^\(ID\|ID_LIKE\)=//p' /etc/os-release | tr -d '\"')"
+    case " $manager_ids " in
+      *arch*|*cachyos*) manager_kind=pkg.tar.zst ;;
+      *debian*|*ubuntu*) manager_kind=deb ;;
+      *fedora*|*rhel*|*centos*) manager_kind=rpm ;;
+    esac
+  fi
+  manager_status="$(manager_recovery_status "$manager_kind")"
+  recovery_available=false
+  recovery_select "$update_state_dir/state.json" >/dev/null 2>&1 && recovery_available=true
+  printf '%s\n' "${missing_commands[@]}" | jq -Rsc --argjson runtimeOpen "$runtime_open" \
+    --arg managerStatus "$manager_status" --argjson recoveryAvailable "$recovery_available" \
+    '{schemaVersion:1,missingCommands:(split("\n")|map(select(length>0))),runtimeOpen:$runtimeOpen,recovery:{available:$recoveryAvailable,managerStatus:$managerStatus,automaticRepair:false,dataRestore:false},taskProvider:"desktop-bridge-unavailable",channels:{stable:"attestation-required",beta:"blocked-unverified-origin"}}'
+  exit
+fi
+
 [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
   echo "$PROGRAM: invalid GitHub repository: $REPO" >&2
   exit 2
 }
-if [[ -n "$REQUESTED_VERSION" && ! "$REQUESTED_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ -n "$REQUESTED_VERSION" && ! "$REQUESTED_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[1-9][0-9]*)?$ ]]; then
   echo "$PROGRAM: invalid version: $REQUESTED_VERSION" >&2
   exit 2
 fi
@@ -68,6 +296,22 @@ need cp
 need rm
 need date
 need install
+need gh
+need flock
+need readlink
+need chmod
+need mv
+if [[ "$MODE" != check ]]; then update_lock; fi
+if [[ "$RECOVER" == 1 ]]; then
+  recovery_record="$(recovery_select "$update_state_dir/state.json")" || {
+    echo "$PROGRAM: no valid retained recovery identity; journal and candidate are unchanged" >&2
+    exit 2
+  }
+  mapfile -t recovery_fields <<< "$recovery_record"
+  RECOVERY_IDENTITY="${recovery_fields[0]}"
+  RECOVERY_SHA="${recovery_fields[1]}"
+  REQUESTED_VERSION="$RECOVERY_IDENTITY"
+fi
 
 sync_desktop_entry() {
   local system_dir="${CODEX_LAB_SYSTEM_APPLICATIONS_DIR:-${CODEXUI_SYSTEM_APPLICATIONS_DIR:-/usr/share/applications}}"
@@ -187,20 +431,20 @@ fi
 case " $id $id_like " in
   *" arch "*|*" cachyos "*)
     pkg_kind="pkg.tar.zst"
-    deps=(alsa-lib at-spi2-core cairo cups dbus expat gcc-libs gdk-pixbuf2 glib2 gtk3 libdrm libnotify libusb libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr mesa nspr nss pango systemd-libs xdg-utils nodejs curl jq desktop-file-utils pyside6 spectacle tesseract tesseract-data-eng tesseract-data-spa zbar)
+    deps=(alsa-lib at-spi2-core cairo cups dbus expat gcc-libs gdk-pixbuf2 glib2 gtk3 libdrm libnotify libusb libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr mesa nspr nss pango systemd-libs xdg-utils nodejs curl jq github-cli desktop-file-utils)
     install_cmd=(pacman -U)
     [[ "$FORCE" -eq 1 ]] || install_cmd+=(--needed)
     ;;
   *" debian "*|*" ubuntu "*)
     pkg_kind="deb"
-    deps=(libgtk-3-0 libnotify4 libnss3 xdg-utils libatspi2.0-0 libdrm2 libgbm1 libxcb-dri3-0 libasound2 libcups2 libdbus-1-3 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 nodejs curl jq desktop-file-utils python3-pyside6.qtwidgets python3-pyside6.qtnetwork kde-spectacle tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa zbar-tools)
+    deps=(libgtk-3-0 libnotify4 libnss3 xdg-utils libatspi2.0-0 libdrm2 libgbm1 libxcb-dri3-0 libasound2 libcups2 libdbus-1-3 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 nodejs curl jq gh desktop-file-utils)
     install_cmd=(apt-get install -y)
     [[ "$FORCE" -eq 1 ]] && install_cmd+=(--reinstall)
     ;;
   *" fedora "*|*" rhel "*|*" centos "*)
     pkg_kind="rpm"
-    deps=(alsa-lib at-spi2-core cairo cups-libs dbus-libs expat gtk3 libdrm libnotify libusb1 libX11 libxcb libXcomposite libXdamage libXext libXfixes libxkbcommon libXrandr mesa-libgbm nspr nss pango xdg-utils nodejs curl jq desktop-file-utils python3-pyside6 spectacle tesseract tesseract-langpack-eng tesseract-langpack-spa zbar)
-    if [[ "$FORCE" -eq 1 ]]; then
+    deps=(alsa-lib at-spi2-core cairo cups-libs dbus-libs expat gtk3 libdrm libnotify libusb1 libX11 libxcb libXcomposite libXdamage libXext libXfixes libxkbcommon libXrandr mesa-libgbm nspr nss pango xdg-utils nodejs curl jq gh desktop-file-utils)
+    if [[ "$FORCE" -eq 1 ]] && rpm -q "$PACKAGE_NAME" >/dev/null 2>&1; then
       install_cmd=(dnf reinstall -y)
     else
       install_cmd=(dnf install -y)
@@ -212,22 +456,30 @@ case " $id $id_like " in
     ;;
 esac
 
-current_version() {
-  local version=""
+current_identity() {
+  local identity="" version="" manifest
+  for manifest in /opt/codex-id-lab-unofficial/manifest.json /opt/codex-ui-linux-port/manifest.json; do
+    [[ -r "$manifest" ]] || continue
+    identity="$(jq -r 'if (.packageVersion | type) == "string" then .packageVersion elif (.version | type) == "string" then .version + "-1" else empty end' "$manifest")"
+    [[ -n "$identity" ]] && { printf '%s\n' "$identity"; return; }
+  done
   if command -v codex-lab >/dev/null 2>&1; then
-    version=$(codex-lab --version 2>/dev/null | sed -n 's/.*\([0-9][0-9]\.[0-9][0-9][0-9]\.[0-9][0-9]*\).*/\1/p' | head -n 1)
+    version="$(codex-lab --version 2>/dev/null | sed -n 's/.*\([0-9][0-9]\.[0-9][0-9][0-9]\.[0-9][0-9]*\).*/\1/p' | head -n 1)"
   fi
-  if [[ -z "$version" && -r /opt/codex-id-lab-unofficial/manifest.json ]]; then
-    version=$(jq -r '.version // empty' /opt/codex-id-lab-unofficial/manifest.json)
-  fi
-  if [[ -z "$version" && -r /opt/codex-ui-linux-port/manifest.json ]]; then
-    version=$(jq -r '.version // empty' /opt/codex-ui-linux-port/manifest.json)
-  fi
-  printf '%s\n' "$version"
+  [[ -n "$version" ]] && printf '%s-1\n' "$version"
 }
 
 api_json="$(mktemp)"
-trap 'rm -f "$api_json"; [[ -n "${tmpdir:-}" ]] && rm -rf "$tmpdir"' EXIT
+cleanup_update() {
+  local result=$?
+  if [[ "$result" -ne 0 && "$update_active" == 1 && "$update_phase" == INSTALLING ]]; then
+    state_write FAILED "${remote_package_version:-}" "${package_sha:-}" || true
+  fi
+  rm -f "$api_json"
+  [[ -n "${tmpdir:-}" ]] && rm -rf "$tmpdir"
+  return "$result"
+}
+trap cleanup_update EXIT
 
 github_headers=(-H "X-GitHub-Api-Version: 2022-11-28")
 github_token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
@@ -249,6 +501,42 @@ download_asset() {
     -o "$destination"
 }
 
+verify_attestation() {
+  local artifact="$1" digest index bundle bundle_url
+  local attestation_status
+  local -a bundle_urls
+  digest="$(sha256sum "$artifact" | awk '{print $1}')"
+  index="$tmpdir/$(basename "$artifact").attestations.json"
+  bundle="$tmpdir/$(basename "$artifact").attestations.jsonl"
+  attestation_status="$(curl -sS "${github_headers[@]}" -H "Accept: application/vnd.github+json" \
+    -o "$index" -w '%{http_code}' \
+    "https://api.github.com/repos/$REPO/attestations/sha256:$digest?per_page=100")" || {
+    echo "$PROGRAM: unable to query GitHub build provenance for $(basename "$artifact")" >&2
+    exit 1
+  }
+  if [[ "$attestation_status" == 404 ]]; then
+    echo "$PROGRAM: release is missing GitHub build provenance for $(basename "$artifact"); refusing unverified release" >&2
+    exit 1
+  fi
+  [[ "$attestation_status" == 200 ]] || {
+    echo "$PROGRAM: GitHub build provenance query returned HTTP $attestation_status for $(basename "$artifact")" >&2
+    exit 1
+  }
+  mapfile -t bundle_urls < <(jq -r '.attestations[]?.bundle_url // empty' "$index")
+  [[ "${#bundle_urls[@]}" -gt 0 ]] || { echo "$PROGRAM: no build attestation for $(basename "$artifact")" >&2; exit 1; }
+  : > "$bundle"
+  for bundle_url in "${bundle_urls[@]}"; do
+    [[ "$bundle_url" == https://* ]] || { echo "$PROGRAM: unsafe attestation bundle URL" >&2; exit 1; }
+    curl -fsSL "$bundle_url" | jq -c . >> "$bundle"
+  done
+  gh attestation verify "$artifact" \
+    --bundle "$bundle" \
+    --repo "$REPO" \
+    --signer-workflow "$REPO/.github/workflows/release.yml" \
+    --source-ref refs/heads/main \
+    --deny-self-hosted-runners >/dev/null
+}
+
 if [[ -n "$REQUESTED_VERSION" ]]; then
   tag="$REQUESTED_VERSION"
   [[ "$tag" == v* ]] || tag="v$tag"
@@ -263,8 +551,32 @@ fi
   exit 1
 }
 
-latest_version="${tag#v}"
-installed_version="$(current_version || true)"
+tmpdir="$(mktemp -d)"
+mapfile -t manifest_assets < <(jq -r '.assets[] | select(.name == "manifest.json") | [.id, .name] | @tsv' "$api_json")
+[[ "${#manifest_assets[@]}" -eq 1 ]] || { echo "$PROGRAM: expected one manifest.json release asset" >&2; exit 1; }
+IFS=$'\t' read -r manifest_asset_id manifest_asset_name <<< "${manifest_assets[0]}"
+mapfile -t checksums_assets < <(jq -r '.assets[] | select(.name == "checksums.txt") | [.id, .name] | @tsv' "$api_json")
+[[ "${#checksums_assets[@]}" -eq 1 ]] || { echo "$PROGRAM: expected one checksums.txt release asset" >&2; exit 1; }
+IFS=$'\t' read -r checksums_asset_id checksums_asset_name <<< "${checksums_assets[0]}"
+download_asset "$manifest_asset_id" "$tmpdir/$manifest_asset_name"
+download_asset "$checksums_asset_id" "$tmpdir/$checksums_asset_name"
+verify_attestation "$tmpdir/$manifest_asset_name"
+verify_attestation "$tmpdir/$checksums_asset_name"
+
+remote_upstream_version="$(jq -r '.upstreamVersion // empty' "$tmpdir/manifest.json")"
+remote_revision="$(jq -r '.packagingRevision // empty | tostring' "$tmpdir/manifest.json")"
+remote_package_version="$(jq -r '.packageVersion // empty' "$tmpdir/manifest.json")"
+jq -e '.sourceVerification.status == "verified-signed-apt" and .sourceVerification.primaryFingerprint == "3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4" and .sourceVerification.sourceSha256 == .sourceArchiveSha256 and .sourceVerification.sourceUrl == .sourceArchiveUrl' \
+  "$tmpdir/manifest.json" >/dev/null || { echo "$PROGRAM: authenticated builder did not record approved upstream verification" >&2; exit 1; }
+jq -e --arg package "$PACKAGE_NAME" \
+  '.manifestVersion == 2 and .packageName == $package and .architecture == "x86_64" and .buildProfile == "release" and .featureProfile == "base" and (.featureProfileSha256 | test("^[0-9a-f]{64}$")) and (.payloadSha256 | test("^[0-9a-f]{64}$")) and (.commitSha | test("^[0-9a-fA-F]{40}$")) and (.sourceArchiveSha256 | test("^[0-9a-f]{64}$")) and (.buildRecipeSha256 | test("^[0-9a-f]{64}$")) and (.artifacts | type == "array" and length == 4 and (map(.name) | unique | length == 4))' \
+  "$tmpdir/manifest.json" >/dev/null || { echo "$PROGRAM: authenticated manifest identity is invalid" >&2; exit 1; }
+[[ "$remote_upstream_version" =~ ^[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}$ && "$remote_revision" =~ ^[1-9][0-9]{0,8}$ && "$remote_upstream_version-$remote_revision" == "$remote_package_version" && "$tag" == "v$remote_package_version" ]] || {
+  echo "$PROGRAM: release tag and manifest identity do not match" >&2
+  exit 1
+}
+
+installed_version="$(current_identity || true)"
 migration_needed=0
 if ! command -v codex-lab >/dev/null 2>&1 && { command -v codex-ui-linux >/dev/null 2>&1 || [[ -r /opt/codex-ui-linux-port/manifest.json ]]; }; then
   migration_needed=1
@@ -272,12 +584,41 @@ fi
 
 if [[ "$MODE" == "check" ]]; then
   echo "installed=${installed_version:-none}"
-  echo "latest=$latest_version"
+  echo "latest=$remote_package_version"
+  echo "upstream=$remote_upstream_version"
+  echo "revision=$remote_revision"
   echo "package=$pkg_kind"
   exit 0
 fi
 
-if [[ "$FORCE" -ne 1 && "$migration_needed" -eq 0 && -n "$installed_version" && "$installed_version" == "$latest_version" ]]; then
+explicit=0
+[[ -n "$REQUESTED_VERSION" ]] && explicit=1
+decision="$(release_decision "$installed_version" "$remote_package_version" "$explicit" "$FORCE" "$migration_needed")"
+if [[ "$decision" == "downgrade-blocked" ]]; then
+  echo "$PROGRAM: refusing implicit downgrade from $installed_version to $remote_package_version" >&2
+  exit 1
+fi
+if [[ "$decision" == "downgrade" ]]; then
+  case "$pkg_kind" in
+    deb) install_cmd+=(--allow-downgrades) ;;
+    rpm) install_cmd=(dnf downgrade -y) ;;
+  esac
+fi
+installed_manifest=/opt/codex-id-lab-unofficial/manifest.json
+[[ -f "$installed_manifest" ]] || installed_manifest=/opt/codex-ui-linux-port/manifest.json
+compatibility="$(compatibility_guard "$installed_manifest" "$tmpdir/manifest.json" "$decision" "$ALLOW_PROFILE_CHANGE" "$ACCEPT_DATA_DOWNGRADE_RISK")"
+case "$compatibility" in
+  invalid-compatibility-metadata)
+    echo "$PROGRAM: compatibility metadata is corrupt; refusing installation" >&2
+    exit 1 ;;
+  data-downgrade-risk-blocked)
+    echo "$PROGRAM: package downgrade does not restore user data; inspect compatibility and explicitly use --accept-data-downgrade-risk" >&2
+    exit 1 ;;
+  profile-change-blocked)
+    echo "$PROGRAM: changed installed build feature profile; rebuild the intended profile or explicitly use --allow-profile-change; preferences/data are preserved" >&2
+    exit 1 ;;
+esac
+if [[ "$decision" == "current" ]]; then
   echo "$PROGRAM: already up to date ($installed_version)"
   if [[ "$SMOKE" -ne 1 ]]; then
     sync_desktop_entry
@@ -285,34 +626,55 @@ if [[ "$FORCE" -ne 1 && "$migration_needed" -eq 0 && -n "$installed_version" && 
   fi
 fi
 
-tmpdir="$(mktemp -d)"
 case "$pkg_kind" in
-  pkg.tar.zst) asset_suffix=".pkg.tar.zst" ;;
-  deb) asset_suffix="_amd64.deb" ;;
-  rpm) asset_suffix=".x86_64.rpm" ;;
+  pkg.tar.zst) expected_package_name="${PACKAGE_NAME}-${remote_upstream_version}-${remote_revision}-x86_64.pkg.tar.zst" ;;
+  deb) expected_package_name="${PACKAGE_NAME}_${remote_upstream_version}-${remote_revision}_amd64.deb" ;;
+  rpm) expected_package_name="${PACKAGE_NAME}-${remote_upstream_version}-${remote_revision}.x86_64.rpm" ;;
 esac
-
-mapfile -t package_assets < <(jq -r --arg name "$PACKAGE_NAME" --arg version "$latest_version" --arg suffix "$asset_suffix" \
-  '.assets[] | select(.name | startswith($name)) | select(.name | contains($version) and endswith($suffix)) | [.id, .name] | @tsv' "$api_json")
+mapfile -t package_assets < <(jq -r --arg name "$expected_package_name" \
+  '.assets[] | select(.name == $name) | [.id, .name] | @tsv' "$api_json")
 [[ "${#package_assets[@]}" -eq 1 ]] || {
   echo "$PROGRAM: expected one package asset for $pkg_kind, found ${#package_assets[@]}" >&2
   exit 1
 }
 
 IFS=$'\t' read -r package_asset_id package_asset_name <<< "${package_assets[0]}"
-mapfile -t checksums_assets < <(jq -r \
-  '.assets[] | select(.name == "checksums.txt") | [.id, .name] | @tsv' "$api_json")
-[[ "${#checksums_assets[@]}" -eq 1 ]] || { echo "$PROGRAM: expected one checksums.txt release asset" >&2; exit 1; }
-IFS=$'\t' read -r checksums_asset_id checksums_asset_name <<< "${checksums_assets[0]}"
 
 echo "$PROGRAM: downloading $package_asset_name from $REPO $tag"
-download_asset "$package_asset_id" "$tmpdir/$package_asset_name"
-download_asset "$checksums_asset_id" "$tmpdir/$checksums_asset_name"
+expected_cache_sha="$(jq -r --arg name "$package_asset_name" '.artifacts[]|select(.name==$name)|.sha256' "$tmpdir/manifest.json")"
+[[ "$expected_cache_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "$PROGRAM: invalid candidate digest" >&2; exit 1; }
+if [[ "$RECOVER" == 1 ]] && ! recovery_match "$RECOVERY_IDENTITY" "$RECOVERY_SHA" "$remote_package_version" "$expected_cache_sha"; then
+  echo "$PROGRAM: authenticated release no longer matches the retained recovery candidate; refusing replacement" >&2
+  exit 1
+fi
+cached_package="$update_cache_dir/$expected_cache_sha-$package_asset_name"
+if [[ -f "$cached_package" && ! -L "$cached_package" && "$(sha256sum "$cached_package" | awk '{print $1}')" == "$expected_cache_sha" ]]; then
+  cp -- "$cached_package" "$tmpdir/$package_asset_name"
+else
+  download_asset "$package_asset_id" "$tmpdir/$package_asset_name"
+fi
+verify_attestation "$tmpdir/$package_asset_name"
 
-package="$(find "$tmpdir" -maxdepth 1 -type f -name "*.${pkg_kind}" | head -n 1)"
-[[ -n "$package" ]] || { echo "$PROGRAM: package asset not found for $pkg_kind" >&2; exit 1; }
+package="$tmpdir/$package_asset_name"
+[[ -s "$package" ]] || { echo "$PROGRAM: package asset not found for $pkg_kind" >&2; exit 1; }
 
 package_name="$(basename "$package")"
+package_sha="$(sha256sum "$package" | awk '{print $1}')"
+package_size="$(stat -c %s "$package")"
+case "$pkg_kind" in
+  pkg.tar.zst) manifest_format="arch"; manifest_architecture="x86_64" ;;
+  deb) manifest_format="deb"; manifest_architecture="amd64" ;;
+  rpm) manifest_format="rpm"; manifest_architecture="x86_64" ;;
+esac
+jq -e \
+  --arg name "$package_name" \
+  --arg format "$manifest_format" \
+  --arg architecture "$manifest_architecture" \
+  --arg sha "$package_sha" \
+  --argjson size "$package_size" \
+  '[.artifacts[] | select(.name == $name and .format == $format and .architecture == $architecture and .sha256 == $sha and .size == $size)] | length == 1' \
+  "$tmpdir/manifest.json" >/dev/null || { echo "$PROGRAM: package does not match the authenticated manifest" >&2; exit 1; }
+
 package_covered=0
 while read -r expected_sha asset_name extra; do
   [[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "$PROGRAM: invalid checksum entry" >&2; exit 1; }
@@ -326,7 +688,30 @@ done < "$tmpdir/checksums.txt"
 
 (cd "$tmpdir" && sha256sum -c checksums.txt --ignore-missing)
 
+candidate_temporary="$(mktemp "$update_cache_dir/candidate.XXXXXX")"
+cp -- "$package" "$candidate_temporary"
+chmod 600 "$candidate_temporary"
+mv -f -- "$candidate_temporary" "$cached_package"
+state_write VERIFIED "$remote_package_version" "$package_sha"
+if runtime_is_open; then
+  state_write DEFERRED "$remote_package_version" "$package_sha"
+  if [[ "$WAIT_CLOSE" == 0 ]]; then
+    echo "$PROGRAM: verified candidate retained; close Codex I+D Lab and run codex-lab-update again"
+    exit 0
+  fi
+  echo "$PROGRAM: waiting for the runtime to close; no privileges requested yet"
+  while runtime_is_open; do sleep 2; done
+fi
+
 missing=()
+if [[ "$RECOVER" == 1 ]]; then
+  manager_status="$(manager_recovery_status "$pkg_kind")"
+  if [[ "$manager_status" != native-manager-validation-required ]]; then
+    state_write RECOVERY_BLOCKED "$remote_package_version" "$package_sha"
+    echo "$PROGRAM: $manager_status; inspect the native manager before explicit recovery. No lock removal or global repair attempted" >&2
+    exit 2
+  fi
+fi
 for dep in "${deps[@]}"; do
   case "$pkg_kind" in
     pkg.tar.zst) pacman -Qi "$dep" >/dev/null 2>&1 || missing+=("$dep") ;;
@@ -356,8 +741,32 @@ if [[ "${#missing[@]}" -gt 0 ]]; then
   esac
 fi
 
+if runtime_is_open; then
+  state_write DEFERRED "$remote_package_version" "$package_sha"
+  echo "$PROGRAM: runtime reopened; installation deferred"
+  exit 0
+fi
+state_write INSTALLING "$remote_package_version" "$package_sha"
 echo "$PROGRAM: installing $package"
-"${elevate[@]}" "${install_cmd[@]}" "$package"
+if ! "${elevate[@]}" "${install_cmd[@]}" "$package"; then
+  state_write CANCELLED_OR_FAILED "$remote_package_version" "$package_sha"
+  echo "$PROGRAM: package manager did not complete; candidate retained, retry is explicit" >&2
+  exit 1
+fi
+
+[[ "$(current_identity || true)" == "$remote_package_version" ]] || {
+  echo "$PROGRAM: installed manifest identity does not match $remote_package_version" >&2
+  exit 1
+}
+installed_manifest="/opt/codex-id-lab-unofficial/manifest.json"
+jq -e --slurpfile remote "$tmpdir/manifest.json" '
+  {upstreamVersion, packageVersion, packagingRevision, architecture, buildProfile, featureProfile, featureProfileSha256, payloadSha256, sourceVerification, commitSha, sourceArchiveFile, sourceArchiveSha256, buildRecipeSha256}
+  ==
+  ($remote[0] | {upstreamVersion, packageVersion, packagingRevision, architecture, buildProfile, featureProfile, featureProfileSha256, payloadSha256, sourceVerification, commitSha, sourceArchiveFile, sourceArchiveSha256, buildRecipeSha256})
+' "$installed_manifest" >/dev/null || {
+  echo "$PROGRAM: installed and remote manifest identities are not concordant" >&2
+  exit 1
+}
 
 command -v codex-lab >/dev/null 2>&1 || { echo "$PROGRAM: codex-lab not found after install" >&2; exit 1; }
 command -v codex-lab-install >/dev/null 2>&1 || { echo "$PROGRAM: codex-lab-install not found after install" >&2; exit 1; }
@@ -387,4 +796,5 @@ if [[ "$SMOKE" -eq 1 ]]; then
   fi
 fi
 
-echo "$PROGRAM: installed $latest_version"
+echo "$PROGRAM: installed $remote_package_version"
+state_write INSTALLED "$remote_package_version" "$package_sha"
