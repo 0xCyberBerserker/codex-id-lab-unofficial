@@ -98,7 +98,7 @@
           "destination": "tools/global-dictation/Cargo.toml",
           "upstreamSha256": "c14a42c6369a391d2ff398f57ff7525f1314f689382f56ee18b286b2f9612da3",
           "modifications": [
-            "Declared inherited MIT license explicitly."
+            "Declared inherited MIT license explicitly and updated the helper to maintained zbus and Tokio versions."
           ]
         },
         {
@@ -106,7 +106,7 @@
           "destination": "tools/global-dictation/Cargo.lock",
           "upstreamSha256": "a8331385a10335c87988d520649b9199d91b2107a3f7bade1100ebeaeb554064",
           "modifications": [
-            "Updated event-listener 5.4.1 to 5.4.2 for RUSTSEC-2026-0221; locked registry checksums retained."
+            "Migrated to zbus 6 with patched Tokio and rustix; locked registry checksums retained."
           ]
         },
         {
@@ -114,7 +114,7 @@
           "destination": "tools/global-dictation/src/main.rs",
           "upstreamSha256": "64c49407eddae1e1d6ac3fd715485d2c6a3f4a7cc460b334a69bea85664a173f",
           "modifications": [
-            "Added MIT attribution, unconditional portal session cleanup, interrupted-chord release and one regression test; formatted with rustfmt."
+            "Added MIT attribution, unconditional portal session cleanup, interrupted-chord release and one regression test; adapted D-Bus types and fixture builders to zbus 6."
           ]
         },
         {
