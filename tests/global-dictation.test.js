@@ -126,7 +126,12 @@ test("actual candidate stages a hashed helper and disabling in a fresh build lea
     process.env.CODEX_LAB_GLOBAL_DICTATION_HELPER_SHA256 = crypto.createHash("sha256").update(fs.readFileSync(helper)).digest("hex");
     const runtime = await stageRuntime(app, ["global-dictation"]);
     assert.equal(runtime.nativeHelpers.length, 1);
-    assert.equal(runtime.nativeResources.length, 75);
+    const inventory = require("../third-party/global-dictation/manifest.json");
+    const lockfile = fs.readFileSync(path.join(__dirname, "../tools/global-dictation/Cargo.lock"));
+    assert.equal(inventory.lockSha256, crypto.createHash("sha256").update(lockfile).digest("hex"));
+    const expectedNotices = inventory.packages.map(({name, version}) => `${name}-${version}.txt`);
+    assert.deepEqual(runtime.nativeResources.map(({target}) => path.basename(target)).sort(),
+      ["manifest.json", ...expectedNotices].sort());
     fs.mkdirSync(path.join(app, ".codex-linux"));
     fs.writeFileSync(path.join(app, ".codex-linux/build-info.json"), JSON.stringify({resources: [], runtime}));
     diagnose(app);

@@ -11,10 +11,7 @@ use std::{
 use anyhow::{bail, Context, Result};
 use futures_util::StreamExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use zbus::{
-    zvariant::{OwnedObjectPath, OwnedValue, Value},
-    Connection, Proxy,
-};
+use zbus::{Connection, OwnedObjectPath, OwnedVariant as OwnedValue, Proxy, Variant as Value};
 
 const PORTAL_SERVICE: &str = "org.freedesktop.portal.Desktop";
 const PORTAL_PATH: &str = "/org/freedesktop/portal/desktop";
@@ -640,10 +637,8 @@ mod tests {
 
     use futures_util::StreamExt;
     use zbus::{
-        connection::Builder,
-        message::Header,
-        zvariant::{OwnedObjectPath, OwnedValue},
-        Connection,
+        connection::Builder, message::Header, Connection, OwnedObjectPath,
+        OwnedVariant as OwnedValue, Variant as Value,
     };
 
     use super::{
@@ -707,7 +702,7 @@ mod tests {
             let mut results = HashMap::new();
             results.insert(
                 "session_handle".to_string(),
-                OwnedValue::try_from(zbus::zvariant::Value::from(TEST_SESSION))
+                OwnedValue::try_from(Value::from(TEST_SESSION))
                     .map_err(|error| zbus::fdo::Error::Failed(error.to_string()))?,
             );
             emit_response(connection, &handle, 0, results).await?;
@@ -742,23 +737,21 @@ mod tests {
                 .try_clone()
                 .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))?
                 .try_into()
-                .map_err(|error: zbus::zvariant::Error| {
-                    zbus::fdo::Error::InvalidArgs(error.to_string())
-                })?;
+                .map_err(|error: zbus::Error| zbus::fdo::Error::InvalidArgs(error.to_string()))?;
             *self.trigger.lock().unwrap() = Some(trigger);
 
             let handle = request_handle(&header, &options)?;
             let mut returned_properties = HashMap::new();
             returned_properties.insert(
                 "description".to_string(),
-                OwnedValue::try_from(zbus::zvariant::Value::from("Global dictation"))
+                OwnedValue::try_from(Value::from("Global dictation"))
                     .map_err(|error| zbus::fdo::Error::Failed(error.to_string()))?,
             );
             let bound = vec![(SHORTCUT_ID.to_string(), returned_properties)];
             let mut results = HashMap::new();
             results.insert(
                 "shortcuts".to_string(),
-                OwnedValue::try_from(zbus::zvariant::Value::from(bound))
+                OwnedValue::try_from(Value::from(bound))
                     .map_err(|error| zbus::fdo::Error::Failed(error.to_string()))?,
             );
             emit_response(connection, &handle, 0, results).await?;
@@ -792,7 +785,7 @@ mod tests {
             let mut results = HashMap::new();
             results.insert(
                 "session_handle".to_string(),
-                OwnedValue::try_from(zbus::zvariant::Value::from(TEST_PASTE_SESSION))
+                OwnedValue::try_from(Value::from(TEST_PASTE_SESSION))
                     .map_err(|error| zbus::fdo::Error::Failed(error.to_string()))?,
             );
             emit_response(connection, &handle, self.response_code, results).await?;
@@ -878,9 +871,7 @@ mod tests {
             .try_clone()
             .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))?
             .try_into()
-            .map_err(|error: zbus::zvariant::Error| {
-                zbus::fdo::Error::InvalidArgs(error.to_string())
-            })?;
+            .map_err(|error: zbus::Error| zbus::fdo::Error::InvalidArgs(error.to_string()))?;
         OwnedObjectPath::try_from(request_path(sender.as_str(), &token))
             .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))
     }
@@ -960,16 +951,12 @@ mod tests {
         let portal = FakePortal::default();
         let observed_trigger = portal.trigger.clone();
         let server = Builder::address(bus.address.as_str())
-            .unwrap()
             .name(PORTAL_SERVICE)
-            .unwrap()
             .serve_at(PORTAL_PATH, portal)
-            .unwrap()
             .build()
             .await
             .unwrap();
         let client = Builder::address(bus.address.as_str())
-            .unwrap()
             .build()
             .await
             .unwrap();
@@ -1029,18 +1016,13 @@ mod tests {
         let create_count = remote.create_count.clone();
         let key_events = remote.key_events.clone();
         let _server = Builder::address(bus.address.as_str())
-            .unwrap()
             .name(PORTAL_SERVICE)
-            .unwrap()
             .serve_at(PORTAL_PATH, FakePortal::default())
-            .unwrap()
             .serve_at(PORTAL_PATH, remote)
-            .unwrap()
             .build()
             .await
             .unwrap();
         let client = Builder::address(bus.address.as_str())
-            .unwrap()
             .build()
             .await
             .unwrap();
@@ -1074,16 +1056,12 @@ mod tests {
         };
         let observed = remote.key_events.clone();
         let _server = Builder::address(bus.address.as_str())
-            .unwrap()
             .name(PORTAL_SERVICE)
-            .unwrap()
             .serve_at(PORTAL_PATH, remote)
-            .unwrap()
             .build()
             .await
             .unwrap();
         let client = Builder::address(bus.address.as_str())
-            .unwrap()
             .build()
             .await
             .unwrap();
@@ -1103,16 +1081,12 @@ mod tests {
         };
         let create_count = remote.create_count.clone();
         let _server = Builder::address(bus.address.as_str())
-            .unwrap()
             .name(PORTAL_SERVICE)
-            .unwrap()
             .serve_at(PORTAL_PATH, remote)
-            .unwrap()
             .build()
             .await
             .unwrap();
         let client = Builder::address(bus.address.as_str())
-            .unwrap()
             .build()
             .await
             .unwrap();

@@ -6,10 +6,10 @@ not open `/dev/input`, scrape credentials or implement speech recognition itself
 The official runtime remains responsible for dictation and account entitlements.
 X11 input watchers and installer hooks are deliberately excluded.
 
-The original lockfile used event-listener 5.4.1, affected by
-[RUSTSEC-2026-0221](https://rustsec.org/advisories/RUSTSEC-2026-0221.html).
-The lockfile now fixes 5.4.2. OSV queried all 90 locked registry dependencies on
-2026-09-12: no reported advisories. This is not a complete source/security audit.
+The lockfile uses zbus 6 to replace the unmaintained standalone D-Bus crates,
+and updates Tokio and rustix for RUSTSEC-2026-0386 and RUSTSEC-2026-0486.
+On 2026-11-19, OSV reported no advisories for its 62 locked registry dependencies.
+This is not a complete source/security audit.
 Build scripts were inspected and compiled offline with personal homes, desktop
 bus and networking unavailable. Nine native tests pass against a private D-Bus.
 Local adaptations close portal sessions on errors and best-effort release keys
@@ -42,7 +42,7 @@ graph with `cargo metadata --locked --offline --filter-platform
 x86_64-unknown-linux-gnu --manifest-path tools/global-dictation/Cargo.toml`, then
 pass its JSON as `--metadata PATH --target x86_64-unknown-linux-gnu` to
 `collect-licenses.py --cache PATH --output EMPTY_DIRECTORY`. The tracked inventory
-contains 74 reachable registry crates and explicitly records excluded lockfile
+contains 44 reachable registry crates and explicitly records excluded lockfile
 packages (including UEFI-only r-efi). Checksums, Cargo metadata and notice texts
 are validated before writing. Dictation staging copies the notices and diagnoses
 their hashes. This is not legal certification or a complete source audit.
@@ -54,8 +54,9 @@ GlobalShortcuts y RemoteDesktop sólo para teclado; no abre `/dev/input`, no cop
 credenciales ni implementa reconocimiento de voz. El runtime oficial mantiene el
 dictado y las concesiones de cuenta. Se excluyen watchers X11 y hooks de instalación.
 
-Se corrigió event-listener 5.4.1 → 5.4.2 por RUSTSEC-2026-0221. OSV no detectó
-avisos en las 90 dependencias fijadas el 12-09-2026; no es una auditoría completa.
+El lockfile usa zbus 6 en lugar de los crates D-Bus sin mantenimiento y actualiza
+Tokio y rustix por RUSTSEC-2026-0386 y RUSTSEC-2026-0486. OSV no detectó avisos
+en las 62 dependencias fijadas el 19-11-2026; no es una auditoría completa.
 Se inspeccionaron scripts de build y se compiló offline, sin home personal,
 bus del escritorio ni red. Pasan nueve pruebas nativas contra un D-Bus privado.
 Los cambios locales cierran sesiones al fallar y liberan teclas tras una pega
@@ -73,7 +74,7 @@ metadata Cargo y textos de cada crate fijado antes de escribir avisos en
 `third-party/global-dictation`. No constituye certificación legal ni auditoría
 completa del código fuente.
 
-El inventario fijado usa el grafo Linux alcanzable: 74 crates registry, con
+El inventario fijado usa el grafo Linux alcanzable: 44 crates del registro, con
 exclusiones explícitas del lockfile, incluido r-efi para UEFI. El comando anterior
 requiere metadata filtrada por target y un destino vacío; staging adjunta los
 avisos al helper y diagnóstico detecta modificaciones. No concede por sí solo

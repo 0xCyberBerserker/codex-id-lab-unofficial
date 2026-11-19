@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "description": "Pinned development-only ASAR parser; never installed into the base runtime.",
   "dependencies": {
-    "@electron/asar": "4.3.0"
+    "@electron/asar": "4.3.2"
   }
 }
