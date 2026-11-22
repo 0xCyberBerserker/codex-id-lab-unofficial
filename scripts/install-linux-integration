@@ -16,6 +16,7 @@ install -m 644 "$SCRIPT_DIR/discord-rich-presence.js" "$INSTALL_ROOT/share/disco
 install -m 755 "$SCRIPT_DIR/codex-lab-companion.py" "$INSTALL_ROOT/share/codex-lab-companion.py"
 install -m 644 "$SCRIPT_DIR/codex_lab_account.py" "$INSTALL_ROOT/share/codex_lab_account.py"
 install -m 644 "$SCRIPT_DIR/codex_lab_features.py" "$INSTALL_ROOT/share/codex_lab_features.py"
+install -m 755 "$SCRIPT_DIR/codex_lab_pet.py" "$INSTALL_ROOT/bin/codex-lab-pet-import"
 python3 - "$SCRIPT_DIR/../linux-features" "$INSTALL_ROOT/share/feature-catalog.json" <<'PY'
 import json
 from pathlib import Path

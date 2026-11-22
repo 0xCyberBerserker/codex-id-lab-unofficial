@@ -1,0 +1,6 @@
+{
+  "id": "experimental-native-pets",
+  "enabled": ["native-pet-quota"],
+  "settings": {},
+  "runtimePatches": true
+}

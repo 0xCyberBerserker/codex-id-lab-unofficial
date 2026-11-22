@@ -47,6 +47,10 @@ See [the portal helper procedure](../tools/global-dictation/README.md) for isola
 dependency audit/build and explicit candidate staging. No helper is automatically
 compiled, downloaded, launched or installed by the base profile.
 
+The [native pets experiment](../linux-features/native-pet-quota/README.md)
+enables native quota in its reviewed disposable profile and provides a local
+custom-pet import command. It does not bundle artwork or alter the base ASAR.
+
 ## Español
 
 El puente de autoridad compartida es opt-in: valida socket privado, propiedad y
@@ -90,3 +94,6 @@ binarios/modelos son independientes de la licencia MIT del wrapper.
 
 Consulta [el procedimiento del helper](../tools/global-dictation/README.md).
 El perfil base no compila, descarga, ejecuta ni instala el helper automáticamente.
+El [experimento de mascotas nativas](../linux-features/native-pet-quota/README.md)
+activa el consumo en su perfil desechable y proporciona un importador local de
+mascotas personalizadas. No incluye arte ni modifica el ASAR base.

@@ -1,0 +1,14 @@
+{
+  "id": "native-pet-quota",
+  "title": "Native pet usage",
+  "description": "Read-only usage and reset times in the native pet, without changing the selected sprite.",
+  "defaultEnabled": false,
+  "entrypoints": { "patchDescriptors": "patch.js" },
+  "lab": {
+    "capabilities": ["native-pet", "read-only-usage"],
+    "stability": "experimental",
+    "tests": ["node --test tests/native-pet-quota.test.mjs"],
+    "compatibility": { "asarSha256": ["6570177341c8a8b98c7036dcf95d008b48d8fbb0cf0961dc3e1aba137bc9e29a"] },
+    "acceptancePending": "Physical multi-monitor drag and ordinary mouse gaze are not accepted."
+  }
+}

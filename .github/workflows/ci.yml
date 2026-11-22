@@ -68,3 +68,6 @@ jobs:
 
       - name: Enforce repository privacy boundary
         run: scripts/privacy-audit
+
+      - name: Test native pet usage
+        run: node --test tests/native-pet-quota.test.mjs

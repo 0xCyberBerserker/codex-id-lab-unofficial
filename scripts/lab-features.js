@@ -61,7 +61,7 @@ function stage(appDir, profilePath, featuresRoot, allowRuntime = false) {
       throw new Error(`Upstream ASAR drift for enabled feature: ${feature.id}`);
     }
     const entrypoints = feature.manifest.entrypoints ?? {};
-    const runtimeEntrypoint = profile.runtimePatches && ["appshots", "read-aloud", "global-dictation", "shared-app-server-socket"].includes(feature.id)
+    const runtimeEntrypoint = profile.runtimePatches && ["appshots", "read-aloud", "global-dictation", "shared-app-server-socket", "native-pet-quota"].includes(feature.id)
       && Object.keys(entrypoints).length === 1 && typeof entrypoints.patchDescriptors === "string"
       && fs.realpathSync(feature.dir) === fs.realpathSync(path.join(__dirname, "../linux-features", feature.id));
     if ((Object.keys(entrypoints).length && !runtimeEntrypoint)
