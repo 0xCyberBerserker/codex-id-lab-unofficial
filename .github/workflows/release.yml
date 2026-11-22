@@ -22,7 +22,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  CODEX_LAB_NATIVE_PET_QUOTA: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
 
 concurrency:
   group: codex-lab-release-${{ github.ref }}
@@ -75,11 +74,12 @@ jobs:
       - name: Define release identity
         id: identity
         env:
+          STAGE_QUOTA_REV9: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
           UPSTREAM_VERSION: ${{ steps.source.outputs.version }}
         run: |
           set -euo pipefail
           revision="$(tr -d '[:space:]' < packaging/revision)"
-          if [[ "$CODEX_LAB_NATIVE_PET_QUOTA" == 1 ]]; then
+          if [[ "$STAGE_QUOTA_REV9" == 1 ]]; then
             [[ "$UPSTREAM_VERSION" == 26.1117.41037 ]] || { echo "Quota patch requires its reviewed upstream version" >&2; exit 1; }
             revision=9
           fi
@@ -145,6 +145,7 @@ jobs:
       - name: Build packages
         if: steps.freshness.outputs.fresh != 'true'
         env:
+          CODEX_LAB_NATIVE_PET_QUOTA: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
           SOURCE_URL: ${{ steps.source.outputs.source_url }}
           REVISION: ${{ steps.identity.outputs.revision }}
           VERSION: ${{ steps.source.outputs.version }}
@@ -159,6 +160,7 @@ jobs:
       - name: Validate release artifacts
         if: steps.freshness.outputs.fresh != 'true'
         env:
+          CODEX_LAB_NATIVE_PET_QUOTA: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
           VERSION: ${{ steps.source.outputs.version }}
           REVISION: ${{ steps.identity.outputs.revision }}
         run: |
@@ -168,10 +170,11 @@ jobs:
         if: steps.freshness.outputs.fresh != 'true'
         env:
           CODEX_LAB_CI_SHARED_NETWORK_FALLBACK: "1"
+          STAGE_QUOTA_REV9: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
           PACKAGE_VERSION: ${{ steps.identity.outputs.package_version }}
         run: |
           TASK_SMOKE_CANDIDATE=$(mktemp -d /tmp/codex-lab-smoke.XXXXXX)
-          if [[ "$CODEX_LAB_NATIVE_PET_QUOTA" == 1 ]]; then
+          if [[ "$STAGE_QUOTA_REV9" == 1 ]]; then
             bsdtar -xf "dist/codex-id-lab-unofficial-${PACKAGE_VERSION}-x86_64.pkg.tar.zst" \
               -C "$TASK_SMOKE_CANDIDATE" opt/codex-id-lab-unofficial
             TASK_SMOKE_CANDIDATE="$TASK_SMOKE_CANDIDATE/opt/codex-id-lab-unofficial"

@@ -445,6 +445,14 @@ class PublicationContractTests(unittest.TestCase):
         self.assertLess(draft, attestation)
         self.assertLess(attestation, promotion)
 
+    def test_quota_draft_does_not_change_base_tests_or_auto_promote(self):
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        steps = workflow.split("      - name: ")
+        quota_steps = {step.splitlines()[0] for step in steps if "CODEX_LAB_NATIVE_PET_QUOTA:" in step}
+        self.assertEqual(quota_steps, {"Build packages", "Validate release artifacts"})
+        promotion = next(step for step in steps if step.startswith("Promote complete release\n"))
+        self.assertIn("if: ${{ !inputs.stage_quota_rev9 }}", promotion)
+
 
 if __name__ == "__main__":
     unittest.main()
