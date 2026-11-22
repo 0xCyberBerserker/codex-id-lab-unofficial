@@ -90,7 +90,10 @@ build_recipe_sha="$("$ROOT/scripts/build-recipe-sha")"
 build_commit="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
 build_profile="${CODEX_LAB_BUILD_PROFILE:-release}"
 feature_profile="${CODEX_LAB_FEATURE_PROFILE:-base}"
-if [[ "$native_pets" == 1 ]]; then feature_profile=experimental-native-pets; fi
+if [[ "$native_pets" == 1 && "$feature_profile" != base ]]; then
+  echo "build-from-linux: native pets extends only the unchanged base profile" >&2
+  exit 2
+fi
 feature_profile_file="$ROOT/packaging/profiles/$feature_profile.json"
 [[ "$build_commit" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "build-from-linux: invalid build commit" >&2; exit 2; }
 [[ "$build_profile" =~ ^[a-z0-9][a-z0-9.-]*$ ]] || { echo "build-from-linux: invalid build profile" >&2; exit 2; }
@@ -119,10 +122,12 @@ jq -n \
   --arg build_profile "$build_profile" \
   --arg feature_profile "$feature_profile" \
   --arg feature_profile_sha256 "$feature_profile_sha" \
+  --arg native_pets "$native_pets" \
   --arg payload_sha256 "$payload_sha" \
   --argjson source_verification "$source_verification" \
   --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{manifestVersion: 2, version: $version, upstreamVersion: $version, packageVersion: $package_version, packagingRevision: $packaging_revision, architecture: "x86_64", buildProfile: $build_profile, featureProfile: $feature_profile, featureProfileSha256: $feature_profile_sha256, payloadSha256: $payload_sha256, sourceVerification: $source_verification, commitSha: $build_commit, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-id-lab-unofficial"}' \
+  '{manifestVersion: 2, version: $version, upstreamVersion: $version, packageVersion: $package_version, packagingRevision: $packaging_revision, architecture: "x86_64", buildProfile: $build_profile, featureProfile: $feature_profile, featureProfileSha256: $feature_profile_sha256, payloadSha256: $payload_sha256, sourceVerification: $source_verification, commitSha: $build_commit, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-id-lab-unofficial"}
+    + (if $native_pets == "1" then {runtimeExtensions: {nativePets: "local-generator-v1"}} else {} end)' \
   > "$WORKDIR/build-manifest.json"
 
 "$ROOT/scripts/build-packages" "$WORKDIR/pkgroot" "$VERSION" "$REVISION" "$WORKDIR/build-manifest.json"

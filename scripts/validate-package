@@ -93,10 +93,13 @@ done
 dpkg-deb -x "$SOURCE_PACKAGE" "$source_root" || fail "invalid source package"
 upstream="$source_root/usr/lib/chatgpt"
 [[ -d "$upstream" ]] || fail "source package misses upstream runtime"
-native_pets="$(jq -r '.featureProfile' "$app/manifest.json")"
-if [[ "$native_pets" == experimental-native-pets ]]; then
+native_pets="$(jq -r '.runtimeExtensions.nativePets // empty' "$app/manifest.json")"
+if [[ -n "$native_pets" ]]; then
+  [[ "$native_pets" == local-generator-v1 ]] || fail "unknown native pet extension"
   [[ "${CODEX_LAB_NATIVE_PETS_CANDIDATE:-0}" == 1 &&
-    "$(jq -r '.buildProfile' "$app/manifest.json")" == local-candidate ]] ||
+    "$(jq -r '.buildProfile' "$app/manifest.json")" == local-candidate &&
+    "$(jq -r '.featureProfile' "$app/manifest.json")" == base &&
+    "$(jq -r '.featureProfileSha256' "$app/manifest.json")" == "$(sha256sum "$ROOT/packaging/profiles/base.json" | awk '{print $1}')" ]] ||
     fail "native pets requires explicit local candidate validation"
   test -x "$app/share/native-pets/export-pirate-sheet" || fail "missing local pet generator"
   test ! -e "$app/share/native-pets/atlas.png" || fail "generated atlas must not be distributed"
@@ -108,7 +111,7 @@ while IFS= read -r -d '' source_path; do
     [[ -L "$target" && "$(readlink "$target")" == "$(readlink "$source_path")" ]] || fail "upstream symlink changed: $relative"
   elif [[ -f "$source_path" ]]; then
     [[ -f "$target" ]] || fail "upstream file missing: $relative"
-    if [[ "$native_pets" == experimental-native-pets && "$relative" == resources/app.asar ]]; then
+    if [[ "$native_pets" == local-generator-v1 && "$relative" == resources/app.asar ]]; then
       node "$ROOT/scripts/verify-native-pets-asar.mjs" "$source_path" "$target" ||
         fail "native pet renderer differs from the reviewed patch"
     else

@@ -11,6 +11,25 @@ INSTALLER = Path(__file__).resolve().parents[1] / "scripts/codex-lab-install"
 
 
 class UpdateStateTests(unittest.TestCase):
+    def test_additive_native_pets_keeps_previous_profile_compatibility(self):
+        with tempfile.TemporaryDirectory(prefix="codex-lab-native-pets-update-") as temporary:
+            path = Path(temporary)
+            base = {"featureProfile": "base", "featureProfileSha256": "a" * 64}
+            (path / "installed.json").write_text(json.dumps(base))
+            (path / "remote.json").write_text(json.dumps({
+                **base, "runtimeExtensions": {"nativePets": "local-generator-v1"},
+            }))
+            env = dict(os.environ, CODEX_LAB_COMPATIBILITY_TEST="1",
+                       CODEX_LAB_TEST_INSTALLED_MANIFEST=str(path / "installed.json"),
+                       CODEX_LAB_TEST_REMOTE_MANIFEST=str(path / "remote.json"))
+            result = subprocess.check_output(["bash", str(INSTALLER)], env=env, text=True)
+            self.assertEqual(result.strip(), "compatible-profile-data-schema-unknown")
+            (path / "remote.json").write_text(json.dumps({**base, "featureProfile": "experimental-native-pets"}))
+            self.assertEqual(
+                subprocess.check_output(["bash", str(INSTALLER)], env=env, text=True).strip(),
+                "profile-change-blocked",
+            )
+
     def test_profile_change_and_data_downgrade_require_explicit_choices(self):
         with tempfile.TemporaryDirectory(prefix="codex-lab-update-compat-") as temporary:
             installed, remote = Path(temporary) / "installed.json", Path(temporary) / "remote.json"

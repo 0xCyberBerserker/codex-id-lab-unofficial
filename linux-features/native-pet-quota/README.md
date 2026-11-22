@@ -46,7 +46,10 @@ The packaging candidate is separate from the stable update channel. Build it
 with `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
 and the pinned source package. It carries the native generator, not the PNG.
 The launch hook uses Python 3 and the generator needs Qt 6 Gui and its WebP
-plugin. The stable release validator still rejects this experimental profile.
+plugin. This local package keeps the base profile and hash understood by the
+`-8` updater and declares the extra capability as
+`runtimeExtensions.nativePets = "local-generator-v1"`. Release signing and
+digest checks are unchanged; the stable validator still rejects local builds.
 
 For packaging review, verify a candidate against the untouched, pinned source
 with `node scripts/verify-native-pets-asar.mjs UPSTREAM CANDIDATE`. It checks
@@ -113,8 +116,11 @@ se sobrescriben.
 El candidato empaquetado va separado del actualizador estable. Compílalo
 con `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
 y el paquete fuente fijado. Incluye el generador, no el PNG. El lanzador usa
-Python 3 y el generador necesita Qt 6 Gui con el plugin WebP. El validador de
-releases estables sigue rechazando este perfil experimental.
+Python 3 y el generador necesita Qt 6 Gui con el plugin WebP. Conserva el
+perfil base y su hash para el actualizador del `-8`, y declara la extensión
+aparte como `runtimeExtensions.nativePets = "local-generator-v1"`. No
+cambia la firma ni los hashes; el validador estable sigue rechazando las
+compilaciones locales.
 
 Para revisar el empaquetado, compara un candidato con el ASAR original
 mediante `node scripts/verify-native-pets-asar.mjs ORIGINAL CANDIDATO` desde
