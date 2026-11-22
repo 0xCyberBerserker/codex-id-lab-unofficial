@@ -35,6 +35,11 @@ a profile without an existing `null-signal-pirate` entry.
 Launch the prepared copy with that profile after setup and pick Null Pirate in
 Settings → Pets. Do not run two Desktop processes on the same profile.
 
+For packaging review, verify a candidate against the untouched, pinned source
+with `node scripts/verify-native-pets-asar.mjs UPSTREAM CANDIDATE`. It checks
+that only the reviewed renderer patch changed. This check is not a stable
+package or an updater migration.
+
 Select an existing local Codex profile and a PNG you are allowed to use. The
 installed import command adds a separate `custom:` entry without selecting
 it, replacing a built-in pet, or contacting a service:
@@ -84,6 +89,11 @@ un perfil sin una entrada `null-signal-pirate` previa.
 
 Después, abre la copia con el perfil indicado y elige Null Pirate en Ajustes
 → Mascotas. No abras dos procesos de Desktop con el mismo perfil.
+
+Para revisar el empaquetado, compara un candidato con el ASAR original
+mediante `node scripts/verify-native-pets-asar.mjs ORIGINAL CANDIDATO` desde
+el repositorio. Comprueba que solo cambió el parche revisado del flotante.
+No genera un paquete estable ni migra el actualizador.
 
 El importador instalado añade un PNG local como entrada `custom:` aparte,
 sin seleccionarla, reemplazar una mascota integrada ni contactar un servicio.
