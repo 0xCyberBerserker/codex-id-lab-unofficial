@@ -92,6 +92,12 @@ if [[ -f "\$discord_config" ]]; then
   fi
 fi
 
+if [[ -f "\$APP_ROOT/share/native-pets/native_pets_first_launch.py" ]]; then
+  if ! /usr/bin/python3 "\$APP_ROOT/share/native-pets/native_pets_first_launch.py" "\$APP_ROOT"; then
+    echo "codex-lab: custom pet setup failed; continuing without changing the selected pet" >&2
+  fi
+fi
+
 exec "\$RUNTIME" "\${runtime_args[@]}" "\$@"
 EOF
 

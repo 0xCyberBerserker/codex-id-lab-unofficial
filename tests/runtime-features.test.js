@@ -90,9 +90,12 @@ test("actual ASAR staging preserves unpacked native file content and flags", { s
     const archive = path.join(app, "resources/app.asar");
     await asar.createPackageWithOptions(source, archive, {unpack: "**/" + native});
     assert.equal(asar.statFile(archive, native).unpacked, true);
+    const unpacked = path.join(archive + ".unpacked", native);
+    fs.chmodSync(unpacked, 0o640);
     const result = await stageRuntime(app, ["appshots", "read-aloud"]);
     assert.equal(result.changes.length, 5);
     assert.equal(asar.statFile(archive, native).unpacked, true);
+    assert.equal(fs.statSync(unpacked).mode & 0o777, 0o640);
     assert.equal(asar.extractFile(archive, native).toString(), "native fixture");
     assert.equal(asar.extractFile(archive, "unchanged.txt").toString(), "upstream");
   } finally { fs.rmSync(temporary, {recursive: true, force: true}); }

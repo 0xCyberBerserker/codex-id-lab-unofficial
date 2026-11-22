@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+app="$(realpath "${1:?prepared package tree required}")"
+[[ "${CODEX_LAB_BUILD_PROFILE:-}" == local-candidate && "$app" == /tmp/* ]] || {
+  echo "stage-native-pets-package: only a disposable local candidate is accepted" >&2
+  exit 2
+}
+CODEX_LAB_EXPERIMENTAL_CANDIDATE=1 node "$root/scripts/install-experimental-native-pets.mjs" \
+  --candidate "$app" --first-launch
+test -x "$app/share/native-pets/export-pirate-sheet"
+test ! -e "$app/share/native-pets/atlas.png"

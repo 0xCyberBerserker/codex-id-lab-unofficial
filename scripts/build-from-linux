@@ -8,6 +8,7 @@ VERSION=""
 REVISION="$(tr -d '[:space:]' < "$ROOT/packaging/revision")"
 WORKDIR="$ROOT/build/work"
 DIST="${CODEX_LAB_DIST:-$ROOT/dist}"
+native_pets="${CODEX_LAB_NATIVE_PETS_CANDIDATE:-0}"
 
 usage() {
   echo "Usage: scripts/build-from-linux --source chatgpt_amd64.deb [--source-url URL] [--version VERSION] [--revision REVISION]"
@@ -26,6 +27,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -f "$SOURCE" ]] || { echo "build-from-linux: source package not found: $SOURCE" >&2; exit 2; }
+if [[ "$native_pets" == 1 ]]; then
+  [[ "${CODEX_LAB_BUILD_PROFILE:-release}" == local-candidate ]] || {
+    echo "build-from-linux: native pets is not enabled for stable packages" >&2
+    exit 2
+  }
+  WORKDIR="$(mktemp -d /tmp/codex-native-pets-package.XXXXXX)"
+  trap 'rm -rf -- "$WORKDIR"' EXIT
+fi
 if [[ "${CODEX_LAB_BUILD_PROFILE:-release}" == release || -f "$SOURCE.InRelease" ]]; then
   [[ "${CODEX_LAB_RESOLVER_TEST_MODE:-0}" != 1 ]] || { echo "build-from-linux: test trust anchors cannot identify a production build" >&2; exit 2; }
   "$ROOT/scripts/resolve-linux-source" --output "$SOURCE" --verify-cache
@@ -81,6 +90,7 @@ build_recipe_sha="$("$ROOT/scripts/build-recipe-sha")"
 build_commit="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
 build_profile="${CODEX_LAB_BUILD_PROFILE:-release}"
 feature_profile="${CODEX_LAB_FEATURE_PROFILE:-base}"
+if [[ "$native_pets" == 1 ]]; then feature_profile=experimental-native-pets; fi
 feature_profile_file="$ROOT/packaging/profiles/$feature_profile.json"
 [[ "$build_commit" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "build-from-linux: invalid build commit" >&2; exit 2; }
 [[ "$build_profile" =~ ^[a-z0-9][a-z0-9.-]*$ ]] || { echo "build-from-linux: invalid build profile" >&2; exit 2; }
@@ -89,7 +99,11 @@ feature_profile_file="$ROOT/packaging/profiles/$feature_profile.json"
   exit 2
 }
 feature_profile_sha="$(sha256sum "$feature_profile_file" | awk '{print $1}')"
-node "$ROOT/scripts/lab-features.js" stage "$install_root" "$feature_profile_file" "$ROOT/linux-features" >/dev/null
+if [[ "$native_pets" == 1 ]]; then
+  bash "$ROOT/scripts/stage-native-pets-package" "$install_root" >/dev/null
+else
+  node "$ROOT/scripts/lab-features.js" stage "$install_root" "$feature_profile_file" "$ROOT/linux-features" >/dev/null
+fi
 payload_sha="$("$ROOT/scripts/payload-digest" "$install_root")"
 
 source_archive_file="chatgpt_${VERSION}_amd64.deb"

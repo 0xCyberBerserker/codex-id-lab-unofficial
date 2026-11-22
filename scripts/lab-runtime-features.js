@@ -139,7 +139,7 @@ async function stageRuntime(appDir, enabled) {
     }
     // Candidate-only API. Installed package-manager trees must never be passed here.
     fs.copyFileSync(candidate, archive + ".candidate");
-    if (fs.existsSync(candidate + ".unpacked")) fs.cpSync(candidate + ".unpacked", archive + ".unpacked", { recursive: true });
+    // Unpacked files already matched byte-for-byte above. Keep their original modes.
     fs.renameSync(archive + ".candidate", archive);
     asar.uncache(archive);
     return { outputSha256, changes, ...(nativeHelper ? {nativeHelpers: [{target: "resources/native/codex-global-dictation-linux", sha256: nativeHelper.sha256}], nativeResources: nativeResources.map(({target, sha256}) => ({target, sha256}))} : {}), status: "patched-not-runtime-verified" };

@@ -42,6 +42,12 @@ first launch. To use a PNG cleared for packaging rather than Qt generation,
 add `--atlas /path/to/pet.png` to the setup command. In both cases an existing
 entry is left untouched.
 
+The packaging candidate is separate from the stable update channel. Build it
+with `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
+and the pinned source package. It carries the native generator, not the PNG.
+The launch hook uses Python 3 and the generator needs Qt 6 Gui and its WebP
+plugin. The stable release validator still rejects this experimental profile.
+
 For packaging review, verify a candidate against the untouched, pinned source
 with `node scripts/verify-native-pets-asar.mjs UPSTREAM CANDIDATE`. It checks
 that only the reviewed renderer patch changed. This check is not a stable
@@ -103,6 +109,12 @@ al preparar la copia. Ejecuta su `bin/codex-lab-native-pets` con
 mascota al primer arranque. Para usar un PNG autorizado en vez de generarlo
 con Qt, añade `--atlas /ruta/al/sprite.png`. Las entradas existentes no
 se sobrescriben.
+
+El candidato empaquetado va separado del actualizador estable. Compílalo
+con `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
+y el paquete fuente fijado. Incluye el generador, no el PNG. El lanzador usa
+Python 3 y el generador necesita Qt 6 Gui con el plugin WebP. El validador de
+releases estables sigue rechazando este perfil experimental.
 
 Para revisar el empaquetado, compara un candidato con el ASAR original
 mediante `node scripts/verify-native-pets-asar.mjs ORIGINAL CANDIDATO` desde

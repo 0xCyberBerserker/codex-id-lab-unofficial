@@ -3,6 +3,7 @@
 
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -54,9 +55,14 @@ def ensure_native_pet(app: Path, profile: Path) -> bool:
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 3:
-            raise ValueError("Expected APP PROFILE")
-        ensure_native_pet(Path(sys.argv[1]), Path(sys.argv[2]))
+        if len(sys.argv) not in (2, 3):
+            raise ValueError("Expected APP [PROFILE]")
+        if len(sys.argv) == 3:
+            profile = Path(sys.argv[2])
+        else:
+            profile = Path(os.environ.get("CODEX_HOME") or Path.home() / ("." + "codex")).expanduser().resolve()
+            profile.mkdir(mode=0o700, parents=True, exist_ok=True)
+        ensure_native_pet(Path(sys.argv[1]), profile)
     except (KeyError, OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f"native pets: {error}", file=sys.stderr)
         raise SystemExit(1)
