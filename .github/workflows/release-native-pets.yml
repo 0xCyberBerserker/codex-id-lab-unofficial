@@ -46,6 +46,7 @@ jobs:
             linux-features/compatibility.json linux-features/native-pet-quota \
             packaging/profiles/experimental-native-pets.json \
             scripts/codex_lab_pet.py scripts/install-experimental-native-pets.mjs \
+            scripts/native_pets_first_launch.py scripts/launch-native-pets-candidate \
             scripts/lab-features.js scripts/lab-runtime-features.js scripts/lib/linux-features.js \
             tools/asar-builder tools/native-pet-art > dist/codex-lab-native-pets.tar.gz
           tar -tzf dist/codex-lab-native-pets.tar.gz > members.txt
@@ -88,7 +89,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/codex-lab-native-pets.tar.gz dist/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" --verify-tag --draft --prerelease --latest=false \
             --title "Codex Lab Native Pets (experimental) ${GITHUB_REF_NAME#native-pets-}" \
-            --notes "Source setup for a disposable copy of Codex Lab 26.1117.41037-8. Generates Null Pirate locally and adds native quota without bundling art or profile data. See linux-features/native-pet-quota/README.md. Not an update for the stable channel. Mouse gaze and mixed-monitor drag are outside this prerelease."
+            --notes "Source setup for a disposable copy of Codex Lab 26.1117.41037-8. Generates Pirate Null locally and adds native quota without bundling art or profile data. See linux-features/native-pet-quota/README.md. Not an update for the stable channel. Mouse gaze and mixed-monitor drag are outside this prerelease."
           gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir downloaded \
             --pattern codex-lab-native-pets.tar.gz --pattern SHA256SUMS
           cmp dist/SHA256SUMS downloaded/SHA256SUMS

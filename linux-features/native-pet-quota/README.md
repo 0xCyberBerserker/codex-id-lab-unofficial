@@ -27,13 +27,20 @@ CODEX_HOME="$profile/codex" CODEX_ELECTRON_USER_DATA_PATH="$electron_profile" \
 
 Run this as the desktop user. The installer needs the pinned ASAR development
 dependency, a C++17 compiler, `pkg-config`, Qt 6 Gui with WebP support and
-Python 3. It verifies the original ASAR digest, generates Null Pirate from the
+Python 3. It verifies the original ASAR digest, generates Pirate Null from the
 local built-in sprite and places it in the selected profile. It never
 selects the custom entry or replaces Null Signal. Use a fresh candidate and
 a profile without an existing `null-signal-pirate` entry.
 
-Launch the prepared copy with that profile after setup and pick Null Pirate in
+Launch the prepared copy with that profile after setup and pick Pirate Null in
 Settings → Pets. Do not run two Desktop processes on the same profile.
+
+From the repository checkout, `--first-launch` may replace `--profile` at
+setup. Run the prepared candidate's `bin/codex-lab-native-pets` with
+`CODEX_HOME` set to an existing disposable profile to create the entry on
+first launch. To use a PNG cleared for packaging rather than Qt generation,
+add `--atlas /path/to/pet.png` to the setup command. In both cases an existing
+entry is left untouched.
 
 For packaging review, verify a candidate against the untouched, pinned source
 with `node scripts/verify-native-pets-asar.mjs UPSTREAM CANDIDATE`. It checks
@@ -87,8 +94,15 @@ partir del sprite local y lo guarda en el perfil elegido. No selecciona la
 mascota personalizada ni sustituye a Null Signal. Usa una copia nueva y
 un perfil sin una entrada `null-signal-pirate` previa.
 
-Después, abre la copia con el perfil indicado y elige Null Pirate en Ajustes
+Después, abre la copia con el perfil indicado y elige Pirate Null en Ajustes
 → Mascotas. No abras dos procesos de Desktop con el mismo perfil.
+
+Desde el repositorio, puedes usar `--first-launch` en lugar de `--profile`
+al preparar la copia. Ejecuta su `bin/codex-lab-native-pets` con
+`CODEX_HOME` apuntando a un perfil desechable existente para crear la
+mascota al primer arranque. Para usar un PNG autorizado en vez de generarlo
+con Qt, añade `--atlas /ruta/al/sprite.png`. Las entradas existentes no
+se sobrescriben.
 
 Para revisar el empaquetado, compara un candidato con el ASAR original
 mediante `node scripts/verify-native-pets-asar.mjs ORIGINAL CANDIDATO` desde
