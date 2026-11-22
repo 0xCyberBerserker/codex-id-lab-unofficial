@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const crypto = require("node:crypto");
+const nativePetBundle = /^webview\/assets\/async\/355340\.2e31e7f34f\.js$/;
 
 function sha(file) { return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex"); }
 
@@ -35,6 +36,9 @@ function patchSources(files, enabled) {
     } else if (feature === "shared-app-server-socket") {
       const module = require("../linux-features/shared-app-server-socket/patch.js");
       apply("shared-app-server-main", /^\.vite\/build\/main-[^/]+\.js$/, module.applySharedAppServerSocketPatch);
+    } else if (feature === "native-pet-quota") {
+      const module = require("../linux-features/native-pet-quota/patch.js");
+      apply("native-pet-quota", nativePetBundle, module.applyNativePetQuota);
     } else throw new Error(`Runtime adapter unavailable: ${feature}`);
   }
   return changes;
@@ -86,7 +90,8 @@ async function stageRuntime(appDir, enabled) {
     for (const file of files) {
       const metadata = asar.statFile(archive, file, false);
       if (metadata.unpacked && !metadata.files) unpacked.push("**/" + file.replace(/([*?{}()[\]\\])/g, "\\$1"));
-      if (/^(\.vite\/build\/main-|webview\/assets\/(app-initial-|local-conversation-turn-)).*\.js$/.test(file)) {
+      if (/^(\.vite\/build\/main-|webview\/assets\/(app-initial-|local-conversation-turn-)).*\.js$/.test(file)
+          || (enabled.includes("native-pet-quota") && nativePetBundle.test(file))) {
         sources[file] = asar.extractFile(archive, file).toString("utf8");
       }
     }
@@ -134,7 +139,7 @@ async function stageRuntime(appDir, enabled) {
     }
     // Candidate-only API. Installed package-manager trees must never be passed here.
     fs.copyFileSync(candidate, archive + ".candidate");
-    if (fs.existsSync(candidate + ".unpacked")) fs.cpSync(candidate + ".unpacked", archive + ".unpacked", { recursive: true });
+    // Unpacked files already matched byte-for-byte above. Keep their original modes.
     fs.renameSync(archive + ".candidate", archive);
     asar.uncache(archive);
     return { outputSha256, changes, ...(nativeHelper ? {nativeHelpers: [{target: "resources/native/codex-global-dictation-linux", sha256: nativeHelper.sha256}], nativeResources: nativeResources.map(({target, sha256}) => ({target, sha256}))} : {}), status: "patched-not-runtime-verified" };

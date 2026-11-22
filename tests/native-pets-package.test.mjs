@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+import * as asar from "../tools/asar-builder/node_modules/@electron/asar/lib/asar.js";
+import patch from "../linux-features/native-pet-quota/patch.js";
+import { verifyNativePetsAsar } from "../scripts/verify-native-pets-asar.mjs";
+
+test("requires the approved original and rejects changes outside the exact pet patch", async t => {
+  const root = await mkdtemp(join(tmpdir(), "native-pet-package-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const tree = join(root, "tree");
+  const directory = join(tree, "webview/assets/async");
+  await mkdir(directory, { recursive: true });
+  const bundle = join(directory, "355340.2e31e7f34f.js");
+  const fixture = 'function iN(e){return {items:[{node:jsx(A,{skin:em},"pet"):null]})}),aY?null:';
+  await writeFile(bundle, fixture);
+  const resource = join(tree, "other.txt");
+  await writeFile(resource, "stock");
+  const original = join(root, "stock.asar");
+  await asar.createPackage(tree, original);
+  const approved = [createHash("sha256").update(await readFile(original)).digest("hex")];
+  const accepted = join(root, "reviewed.asar");
+  await writeFile(bundle, patch.applyNativePetQuota(fixture));
+  await asar.createPackage(tree, accepted);
+  await verifyNativePetsAsar(original, accepted, approved);
+  await assert.rejects(verifyNativePetsAsar(original, accepted), /Unreviewed upstream/);
+  await assert.rejects(verifyNativePetsAsar(original, original, approved), /differs from the reviewed patch/);
+  await writeFile(resource, "unexpected");
+  const tampered = join(root, "tampered.asar");
+  await asar.createPackage(tree, tampered);
+  await assert.rejects(verifyNativePetsAsar(original, tampered, approved), /Unauthorized content change/);
+});

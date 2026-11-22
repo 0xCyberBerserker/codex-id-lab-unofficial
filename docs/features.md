@@ -47,6 +47,10 @@ See [the portal helper procedure](../tools/global-dictation/README.md) for isola
 dependency audit/build and explicit candidate staging. No helper is automatically
 compiled, downloaded, launched or installed by the base profile.
 
+The [native pet quota extension](../linux-features/native-pet-quota/README.md)
+adds usage and reset times to the existing pet in the reviewed revision.
+It changes only the pinned renderer code and does not ship custom artwork.
+
 ## Español
 
 El puente de autoridad compartida es opt-in: valida socket privado, propiedad y
@@ -90,3 +94,6 @@ binarios/modelos son independientes de la licencia MIT del wrapper.
 
 Consulta [el procedimiento del helper](../tools/global-dictation/README.md).
 El perfil base no compila, descarga, ejecuta ni instala el helper automáticamente.
+La [extensión de consumo de la mascota](../linux-features/native-pet-quota/README.md)
+añade el uso y los reinicios a la mascota existente en la revisión validada.
+Solo cambia el código del renderer fijado y no distribuye arte personalizado.

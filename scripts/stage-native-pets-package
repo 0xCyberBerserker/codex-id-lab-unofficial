@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+app="$(realpath "${1:?prepared package tree required}")"
+[[ "${CODEX_LAB_NATIVE_PET_QUOTA:-0}" == 1 && "$app" == /tmp/* ]] || {
+  echo "stage-native-pets-package: quota staging needs opt-in and a disposable tree" >&2
+  exit 2
+}
+CODEX_LAB_EXPERIMENTAL_CANDIDATE=1 node -e '
+  const [tool, app, profile] = process.argv.slice(1);
+  require(tool).experimentalStage(app, profile).catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+' "$root/scripts/lab-features.js" "$app" "$root/packaging/profiles/experimental-native-pets.json"

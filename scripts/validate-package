@@ -93,6 +93,21 @@ done
 dpkg-deb -x "$SOURCE_PACKAGE" "$source_root" || fail "invalid source package"
 upstream="$source_root/usr/lib/chatgpt"
 [[ -d "$upstream" ]] || fail "source package misses upstream runtime"
+native_pets="$(jq -r '.runtimeExtensions.nativePetQuota // empty' "$app/manifest.json")"
+[[ ! -e "$app/share/native-pets" && ! -L "$app/share/native-pets" &&
+   ! -e "$app/bin/codex-lab-native-pets" && ! -L "$app/bin/codex-lab-native-pets" ]] ||
+  fail "private pet generators and atlases cannot be packaged"
+jq -e '(.runtimeExtensions // {}) | has("nativePets") | not' "$app/manifest.json" >/dev/null ||
+  fail "private pet extension cannot be packaged"
+if [[ -n "$native_pets" ]]; then
+  [[ "$native_pets" == native-query-v1 ]] || fail "unknown native pet quota extension"
+  [[ "${CODEX_LAB_NATIVE_PET_QUOTA:-0}" == 1 &&
+    "$(jq -r '.featureProfile' "$app/manifest.json")" == base &&
+    "$(jq -r '.featureProfileSha256' "$app/manifest.json")" == "$(sha256sum "$ROOT/packaging/profiles/base.json" | awk '{print $1}')" ]] ||
+    fail "native quota requires explicit validation with the unchanged base profile"
+elif [[ "${CODEX_LAB_NATIVE_PET_QUOTA:-0}" == 1 ]]; then
+  fail "requested native quota extension is missing"
+fi
 while IFS= read -r -d '' source_path; do
   relative="${source_path#"$upstream/"}"
   target="$app/$relative"
@@ -100,7 +115,12 @@ while IFS= read -r -d '' source_path; do
     [[ -L "$target" && "$(readlink "$target")" == "$(readlink "$source_path")" ]] || fail "upstream symlink changed: $relative"
   elif [[ -f "$source_path" ]]; then
     [[ -f "$target" ]] || fail "upstream file missing: $relative"
-    cmp -s "$source_path" "$target" || fail "upstream file changed: $relative"
+    if [[ "$native_pets" == native-query-v1 && "$relative" == resources/app.asar ]]; then
+      node "$ROOT/scripts/verify-native-pets-asar.mjs" "$source_path" "$target" ||
+        fail "native pet renderer differs from the reviewed patch"
+    else
+      cmp -s "$source_path" "$target" || fail "upstream file changed: $relative"
+    fi
     [[ "$(stat -c %a "$source_path")" == "$(stat -c %a "$target")" ]] || fail "upstream mode changed: $relative"
   elif [[ -d "$source_path" ]]; then
     [[ -d "$target" ]] || fail "upstream directory missing: $relative"

@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      stage_quota_rev9:
+        description: "Build 26.1117.41037-9 with quota only; keep the attested release as a draft"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "17 4 * * *"
 
@@ -17,6 +22,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CODEX_LAB_NATIVE_PET_QUOTA: ${{ inputs.stage_quota_rev9 && '1' || '0' }}
 
 concurrency:
   group: codex-lab-release-${{ github.ref }}
@@ -73,6 +79,10 @@ jobs:
         run: |
           set -euo pipefail
           revision="$(tr -d '[:space:]' < packaging/revision)"
+          if [[ "$CODEX_LAB_NATIVE_PET_QUOTA" == 1 ]]; then
+            [[ "$UPSTREAM_VERSION" == 26.1117.41037 ]] || { echo "Quota patch requires its reviewed upstream version" >&2; exit 1; }
+            revision=9
+          fi
           [[ "$revision" =~ ^[1-9][0-9]*$ ]]
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
           echo "package_version=$UPSTREAM_VERSION-$revision" >> "$GITHUB_OUTPUT"
@@ -158,9 +168,16 @@ jobs:
         if: steps.freshness.outputs.fresh != 'true'
         env:
           CODEX_LAB_CI_SHARED_NETWORK_FALLBACK: "1"
+          PACKAGE_VERSION: ${{ steps.identity.outputs.package_version }}
         run: |
           TASK_SMOKE_CANDIDATE=$(mktemp -d /tmp/codex-lab-smoke.XXXXXX)
-          cp -a build/work/pkgroot/opt/codex-id-lab-unofficial/. "$TASK_SMOKE_CANDIDATE/"
+          if [[ "$CODEX_LAB_NATIVE_PET_QUOTA" == 1 ]]; then
+            bsdtar -xf "dist/codex-id-lab-unofficial-${PACKAGE_VERSION}-x86_64.pkg.tar.zst" \
+              -C "$TASK_SMOKE_CANDIDATE" opt/codex-id-lab-unofficial
+            TASK_SMOKE_CANDIDATE="$TASK_SMOKE_CANDIDATE/opt/codex-id-lab-unofficial"
+          else
+            cp -a build/work/pkgroot/opt/codex-id-lab-unofficial/. "$TASK_SMOKE_CANDIDATE/"
+          fi
           bash scripts/test-shared-authority "$TASK_SMOKE_CANDIDATE/resources/codex"
           # Hosted runners deny the user namespace required by the graphical
           # bubblewrap smoke. Keep this fallback credential-free and disposable;
@@ -256,6 +273,7 @@ jobs:
           diff -u expected-assets.txt actual-assets.txt
 
       - name: Promote complete release
+        if: ${{ !inputs.stage_quota_rev9 }}
         env:
           GH_TOKEN: ${{ github.token }}
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
