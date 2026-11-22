@@ -8,7 +8,7 @@ VERSION=""
 REVISION="$(tr -d '[:space:]' < "$ROOT/packaging/revision")"
 WORKDIR="$ROOT/build/work"
 DIST="${CODEX_LAB_DIST:-$ROOT/dist}"
-native_pets="${CODEX_LAB_NATIVE_PETS_CANDIDATE:-0}"
+native_pets="${CODEX_LAB_NATIVE_PET_QUOTA:-0}"
 
 usage() {
   echo "Usage: scripts/build-from-linux --source chatgpt_amd64.deb [--source-url URL] [--version VERSION] [--revision REVISION]"
@@ -28,10 +28,6 @@ done
 
 [[ -f "$SOURCE" ]] || { echo "build-from-linux: source package not found: $SOURCE" >&2; exit 2; }
 if [[ "$native_pets" == 1 ]]; then
-  [[ "${CODEX_LAB_BUILD_PROFILE:-release}" == local-candidate ]] || {
-    echo "build-from-linux: native pets is not enabled for stable packages" >&2
-    exit 2
-  }
   WORKDIR="$(mktemp -d /tmp/codex-native-pets-package.XXXXXX)"
   trap 'rm -rf -- "$WORKDIR"' EXIT
 fi
@@ -127,7 +123,7 @@ jq -n \
   --argjson source_verification "$source_verification" \
   --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   '{manifestVersion: 2, version: $version, upstreamVersion: $version, packageVersion: $package_version, packagingRevision: $packaging_revision, architecture: "x86_64", buildProfile: $build_profile, featureProfile: $feature_profile, featureProfileSha256: $feature_profile_sha256, payloadSha256: $payload_sha256, sourceVerification: $source_verification, commitSha: $build_commit, sourceArchiveFile: $source_archive_file, sourceArchiveUrl: $source_archive_url, sourceArchiveSha256: $source_archive_sha256, buildRecipeSha256: $build_recipe_sha256, generatedAtUtc: $generated_at_utc, sourcePlatform: "linux", packageName: "codex-id-lab-unofficial"}
-    + (if $native_pets == "1" then {runtimeExtensions: {nativePets: "local-generator-v1"}} else {} end)' \
+    + (if $native_pets == "1" then {runtimeExtensions: {nativePetQuota: "native-query-v1"}} else {} end)' \
   > "$WORKDIR/build-manifest.json"
 
 "$ROOT/scripts/build-packages" "$WORKDIR/pkgroot" "$VERSION" "$REVISION" "$WORKDIR/build-manifest.json"

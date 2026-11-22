@@ -42,14 +42,12 @@ first launch. To use a PNG cleared for packaging rather than Qt generation,
 add `--atlas /path/to/pet.png` to the setup command. In both cases an existing
 entry is left untouched.
 
-The packaging candidate is separate from the stable update channel. Build it
-with `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
-and the pinned source package. It carries the native generator, not the PNG.
-The launch hook uses Python 3 and the generator needs Qt 6 Gui and its WebP
-plugin. This local package keeps the base profile and hash understood by the
-`-8` updater and declares the extra capability as
-`runtimeExtensions.nativePets = "local-generator-v1"`. Release signing and
-digest checks are unchanged; the stable validator still rejects local builds.
+Revision `26.1117.41037-9` ships only the quota patch. It keeps the base
+profile and hash understood by the `-8` updater and records
+`runtimeExtensions.nativePetQuota = "native-query-v1"`. No private pet,
+atlas, generator or startup hook is included. The signed release workflow's
+`stage_quota_rev9` input builds a draft without promoting it. Release
+provenance and digest checks are unchanged.
 
 For packaging review, verify a candidate against the untouched, pinned source
 with `node scripts/verify-native-pets-asar.mjs UPSTREAM CANDIDATE`. It checks
@@ -113,14 +111,12 @@ mascota al primer arranque. Para usar un PNG autorizado en vez de generarlo
 con Qt, añade `--atlas /ruta/al/sprite.png`. Las entradas existentes no
 se sobrescriben.
 
-El candidato empaquetado va separado del actualizador estable. Compílalo
-con `CODEX_LAB_BUILD_PROFILE=local-candidate CODEX_LAB_NATIVE_PETS_CANDIDATE=1`
-y el paquete fuente fijado. Incluye el generador, no el PNG. El lanzador usa
-Python 3 y el generador necesita Qt 6 Gui con el plugin WebP. Conserva el
-perfil base y su hash para el actualizador del `-8`, y declara la extensión
-aparte como `runtimeExtensions.nativePets = "local-generator-v1"`. No
-cambia la firma ni los hashes; el validador estable sigue rechazando las
-compilaciones locales.
+La revisión `26.1117.41037-9` incluye solo el parche de consumo. Conserva
+el perfil base y su hash para el actualizador de `-8` y declara
+`runtimeExtensions.nativePetQuota = "native-query-v1"`. No incluye mascotas
+privadas, atlas, generadores ni ganchos de inicio. La opción
+`stage_quota_rev9` del workflow firmado crea un borrador sin promocionarlo.
+No cambian las comprobaciones de procedencia ni de integridad.
 
 Para revisar el empaquetado, compara un candidato con el ASAR original
 mediante `node scripts/verify-native-pets-asar.mjs ORIGINAL CANDIDATO` desde

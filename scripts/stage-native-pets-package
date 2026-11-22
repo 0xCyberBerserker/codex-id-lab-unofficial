@@ -3,11 +3,14 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 app="$(realpath "${1:?prepared package tree required}")"
-[[ "${CODEX_LAB_BUILD_PROFILE:-}" == local-candidate && "$app" == /tmp/* ]] || {
-  echo "stage-native-pets-package: only a disposable local candidate is accepted" >&2
+[[ "${CODEX_LAB_NATIVE_PET_QUOTA:-0}" == 1 && "$app" == /tmp/* ]] || {
+  echo "stage-native-pets-package: quota staging needs opt-in and a disposable tree" >&2
   exit 2
 }
-CODEX_LAB_EXPERIMENTAL_CANDIDATE=1 node "$root/scripts/install-experimental-native-pets.mjs" \
-  --candidate "$app" --first-launch
-test -x "$app/share/native-pets/export-pirate-sheet"
-test ! -e "$app/share/native-pets/atlas.png"
+CODEX_LAB_EXPERIMENTAL_CANDIDATE=1 node -e '
+  const [tool, app, profile] = process.argv.slice(1);
+  require(tool).experimentalStage(app, profile).catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+' "$root/scripts/lab-features.js" "$app" "$root/packaging/profiles/experimental-native-pets.json"

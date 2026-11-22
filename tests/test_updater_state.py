@@ -17,7 +17,7 @@ class UpdateStateTests(unittest.TestCase):
             base = {"featureProfile": "base", "featureProfileSha256": "a" * 64}
             (path / "installed.json").write_text(json.dumps(base))
             (path / "remote.json").write_text(json.dumps({
-                **base, "runtimeExtensions": {"nativePets": "local-generator-v1"},
+                **base, "runtimeExtensions": {"nativePetQuota": "native-query-v1"},
             }))
             env = dict(os.environ, CODEX_LAB_COMPATIBILITY_TEST="1",
                        CODEX_LAB_TEST_INSTALLED_MANIFEST=str(path / "installed.json"),
