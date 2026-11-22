@@ -47,9 +47,9 @@ See [the portal helper procedure](../tools/global-dictation/README.md) for isola
 dependency audit/build and explicit candidate staging. No helper is automatically
 compiled, downloaded, launched or installed by the base profile.
 
-The [native pets experiment](../linux-features/native-pet-quota/README.md)
-enables native quota in its reviewed disposable profile and provides a local
-custom-pet import command. It does not bundle artwork or alter the base ASAR.
+The [native pet quota extension](../linux-features/native-pet-quota/README.md)
+adds usage and reset times to the existing pet in the reviewed revision.
+It changes only the pinned renderer code and does not ship custom artwork.
 
 ## Español
 
@@ -94,6 +94,6 @@ binarios/modelos son independientes de la licencia MIT del wrapper.
 
 Consulta [el procedimiento del helper](../tools/global-dictation/README.md).
 El perfil base no compila, descarga, ejecuta ni instala el helper automáticamente.
-El [experimento de mascotas nativas](../linux-features/native-pet-quota/README.md)
-activa el consumo en su perfil desechable y proporciona un importador local de
-mascotas personalizadas. No incluye arte ni modifica el ASAR base.
+La [extensión de consumo de la mascota](../linux-features/native-pet-quota/README.md)
+añade el uso y los reinicios a la mascota existente en la revisión validada.
+Solo cambia el código del renderer fijado y no distribuye arte personalizado.

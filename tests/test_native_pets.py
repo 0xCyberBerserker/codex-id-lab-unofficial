@@ -8,7 +8,6 @@ import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from codex_lab_pet import PNG_MAGIC, import_pet
-from native_pets_first_launch import ensure_native_pet
 
 
 def chunk(kind, payload):
@@ -66,16 +65,3 @@ class NativePetImportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             import_pet(self.profile, self.sheet, "new-pet", "New pet")
         self.assertEqual(list(other.iterdir()), [])
-
-    def test_first_launch_uses_packaged_png_once_without_qt(self):
-        app = self.root / "app"
-        helper = app / "share" / "native-pets"
-        helper.mkdir(parents=True)
-        (helper / "atlas.png").write_bytes(self.sheet.read_bytes())
-        self.assertTrue(ensure_native_pet(app, self.profile))
-        entry = self.profile / "pets" / "null-signal-pirate"
-        manifest = entry / "pet.json"
-        self.assertEqual(json.loads(manifest.read_text())["displayName"], "Pirate Null")
-        inode = (entry / "spritesheet.png").stat().st_ino
-        self.assertFalse(ensure_native_pet(app, self.profile))
-        self.assertEqual((entry / "spritesheet.png").stat().st_ino, inode)

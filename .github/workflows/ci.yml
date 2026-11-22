@@ -70,6 +70,4 @@ jobs:
         run: scripts/privacy-audit
 
       - name: Test native pet usage
-        run: |
-          node --check scripts/install-experimental-native-pets.mjs
-          node --test tests/native-pet-quota.test.mjs tests/native-pets-package.test.mjs
+        run: node --test tests/native-pet-quota.test.mjs tests/native-pets-package.test.mjs
