@@ -4,9 +4,9 @@ import { createReadStream } from "node:fs";
 import { pathToFileURL } from "node:url";
 import * as asar from "../tools/asar-builder/node_modules/@electron/asar/lib/asar.js";
 import patch from "../linux-features/native-pet-quota/patch.js";
+import runtime from "./lab-runtime-features.js";
 import { readFile } from "node:fs/promises";
 
-const bundle = "webview/assets/async/355340.2e31e7f34f.js";
 const { lab } = JSON.parse(await readFile(new URL("../linux-features/native-pet-quota/feature.json", import.meta.url)));
 
 export async function verifyNativePetsAsar(upstream, candidate, approved = lab.compatibility.asarSha256) {
@@ -16,7 +16,9 @@ export async function verifyNativePetsAsar(upstream, candidate, approved = lab.c
   const entries = file => asar.listPackage(file).map(value => value.slice(1)).sort();
   const paths = entries(upstream);
   assert.deepEqual(entries(candidate), paths, "ASAR path inventory changed");
-  assert.ok(paths.includes(bundle), "Native pet bundle missing");
+  const bundles = paths.filter(path => runtime.nativePetBundle.test(path));
+  assert.equal(bundles.length, 1, "Expected one reviewed native pet bundle");
+  const [bundle] = bundles;
 
   for (const path of paths) {
     const source = asar.statFile(upstream, path, false);

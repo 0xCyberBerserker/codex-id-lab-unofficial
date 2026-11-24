@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       stage_quota_rev9:
-        description: "Build 26.1117.41037-9 with quota only; keep the attested release as a draft"
+        description: "Build a reviewed revision 9 with native quota; keep the attested release as a draft"
         required: false
         type: boolean
         default: false
@@ -80,7 +80,10 @@ jobs:
           set -euo pipefail
           revision="$(tr -d '[:space:]' < packaging/revision)"
           if [[ "$STAGE_QUOTA_REV9" == 1 ]]; then
-            [[ "$UPSTREAM_VERSION" == 26.1117.41037 ]] || { echo "Quota patch requires its reviewed upstream version" >&2; exit 1; }
+            case "$UPSTREAM_VERSION" in
+              26.1117.41037|26.1120.50957) ;;
+              *) echo "Quota patch requires a reviewed upstream version" >&2; exit 1 ;;
+            esac
             revision=9
           fi
           [[ "$revision" =~ ^[1-9][0-9]*$ ]]

@@ -11,6 +11,31 @@ INSTALLER = Path(__file__).resolve().parents[1] / "scripts/codex-lab-install"
 
 
 class UpdateStateTests(unittest.TestCase):
+    def test_candidate_retention_preserves_only_the_pending_owned_package(self):
+        with tempfile.TemporaryDirectory(prefix="codex-lab-update-cache-") as temporary:
+            root = Path(temporary)
+            cache = root / "cache/codex-id-lab-unofficial/candidates"
+            cache.mkdir(parents=True)
+            pending = cache / (64 * "a" + "-codex-id-lab-unofficial-26.1.2-9-x86_64.pkg.tar.zst")
+            old_arch = cache / (64 * "b" + "-codex-id-lab-unofficial-26.1.2-8-x86_64.pkg.tar.zst")
+            old_deb = cache / (64 * "c" + "-codex-id-lab-unofficial_26.1.2-8_amd64.deb")
+            old_rpm = cache / (64 * "d" + "-codex-id-lab-unofficial-26.1.2-8.x86_64.rpm")
+            unrelated = cache / "manual-backup.pkg.tar.zst"
+            external = root / "outside"
+            symlink = cache / (64 * "e" + "-codex-id-lab-unofficial-26.1.2-7-x86_64.pkg.tar.zst")
+            for path in (pending, old_arch, old_deb, old_rpm, unrelated, external):
+                path.write_bytes(b"package")
+            symlink.symlink_to(external)
+            env = dict(os.environ, HOME=temporary, XDG_STATE_HOME=str(root / "state"),
+                       XDG_CACHE_HOME=str(root / "cache"), CODEX_LAB_UPDATE_CACHE_TEST="1")
+            subprocess.run(["bash", str(INSTALLER)], check=True,
+                           env=dict(env, CODEX_LAB_TEST_KEEP_CANDIDATE=str(pending)))
+            self.assertEqual(set(cache.iterdir()), {pending, unrelated, symlink})
+            subprocess.run(["bash", str(INSTALLER)], check=True,
+                           env=dict(env, CODEX_LAB_TEST_KEEP_CANDIDATE=""))
+            self.assertEqual(set(cache.iterdir()), {unrelated, symlink})
+            self.assertEqual(external.read_bytes(), b"package")
+
     def test_additive_native_pets_keeps_previous_profile_compatibility(self):
         with tempfile.TemporaryDirectory(prefix="codex-lab-native-pets-update-") as temporary:
             path = Path(temporary)
