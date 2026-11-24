@@ -55,6 +55,23 @@ update_lock() {
   update_active=1
 }
 
+prune_candidates() {
+  local keep="${1:-}" path name
+  [[ "$update_active" == 1 && ! -L "$update_cache_dir" ]] || return 1
+  for path in "$update_cache_dir"/*; do
+    [[ "$path" != "$keep" && -f "$path" && ! -L "$path" ]] || continue
+    name="${path##*/}"
+    [[ "$name" =~ ^[0-9a-f]{64}-codex-id-lab-unofficial(-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(-x86_64\.pkg\.tar\.zst|\.x86_64\.rpm)|_[0-9]+\.[0-9]+\.[0-9]+-[0-9]+_amd64\.deb)$ ]] || continue
+    rm -f -- "$path" || echo "$PROGRAM: could not remove obsolete cached candidate $name" >&2
+  done
+}
+
+if [[ "${CODEX_LAB_UPDATE_CACHE_TEST:-0}" == 1 ]]; then
+  update_lock
+  prune_candidates "${CODEX_LAB_TEST_KEEP_CANDIDATE:-}"
+  exit
+fi
+
 if [[ "${CODEX_LAB_UPDATE_STATE_TEST:-0}" == 1 ]]; then
   update_lock
   state_write "${CODEX_LAB_TEST_UPDATE_PHASE:?}" "${CODEX_LAB_TEST_UPDATE_IDENTITY:-}" "${CODEX_LAB_TEST_UPDATE_DIGEST:-}"
@@ -541,7 +558,12 @@ fi
   exit 1
 }
 
-tmpdir="$(mktemp -d)"
+if [[ "$MODE" == check ]]; then
+  tmpdir="$(mktemp -d)"
+else
+  # Stage on the filesystem that owns the retained package, not in RAM-backed /tmp.
+  tmpdir="$(mktemp -d "$update_cache_dir/.incoming.XXXXXXXX")"
+fi
 mapfile -t manifest_assets < <(jq -r '.assets[] | select(.name == "manifest.json") | [.id, .name] | @tsv' "$api_json")
 [[ "${#manifest_assets[@]}" -eq 1 ]] || { echo "$PROGRAM: expected one manifest.json release asset" >&2; exit 1; }
 IFS=$'\t' read -r manifest_asset_id manifest_asset_name <<< "${manifest_assets[0]}"
@@ -611,6 +633,10 @@ esac
 if [[ "$decision" == "current" ]]; then
   echo "$PROGRAM: already up to date ($installed_version)"
   if [[ "$SMOKE" -ne 1 ]]; then
+    if jq -e --arg version "$installed_version" '.phase == "INSTALLED" and .packageVersion == $version' \
+        "$update_state_dir/state.json" >/dev/null 2>&1; then
+      prune_candidates
+    fi
     sync_desktop_entry
     exit 0
   fi
@@ -639,16 +665,15 @@ if [[ "$RECOVER" == 1 ]] && ! recovery_match "$RECOVERY_IDENTITY" "$RECOVERY_SHA
 fi
 cached_package="$update_cache_dir/$expected_cache_sha-$package_asset_name"
 if [[ -f "$cached_package" && ! -L "$cached_package" && "$(sha256sum "$cached_package" | awk '{print $1}')" == "$expected_cache_sha" ]]; then
-  cp -- "$cached_package" "$tmpdir/$package_asset_name"
+  package="$cached_package"
 else
-  download_asset "$package_asset_id" "$tmpdir/$package_asset_name"
+  package="$tmpdir/$package_asset_name"
+  download_asset "$package_asset_id" "$package"
 fi
-verify_attestation "$tmpdir/$package_asset_name"
-
-package="$tmpdir/$package_asset_name"
+verify_attestation "$package"
 [[ -s "$package" ]] || { echo "$PROGRAM: package asset not found for $pkg_kind" >&2; exit 1; }
 
-package_name="$(basename "$package")"
+package_name="$package_asset_name"
 package_sha="$(sha256sum "$package" | awk '{print $1}')"
 package_size="$(stat -c %s "$package")"
 case "$pkg_kind" in
@@ -672,17 +697,22 @@ while read -r expected_sha asset_name extra; do
     echo "$PROGRAM: unsafe checksum asset name" >&2
     exit 1
   }
-  [[ "$asset_name" == "$package_name" ]] && package_covered=1
+  if [[ "$asset_name" == "$package_name" ]]; then
+    [[ "$expected_sha" == "$package_sha" ]] || { echo "$PROGRAM: cached or downloaded package failed checksum verification" >&2; exit 1; }
+    package_covered=1
+  fi
 done < "$tmpdir/checksums.txt"
 [[ "$package_covered" -eq 1 ]] || { echo "$PROGRAM: package is not covered by checksums.txt" >&2; exit 1; }
 
 (cd "$tmpdir" && sha256sum -c checksums.txt --ignore-missing)
 
-candidate_temporary="$(mktemp "$update_cache_dir/candidate.XXXXXX")"
-cp -- "$package" "$candidate_temporary"
-chmod 600 "$candidate_temporary"
-mv -f -- "$candidate_temporary" "$cached_package"
+if [[ "$package" != "$cached_package" ]]; then
+  chmod 600 "$package"
+  mv -fT -- "$package" "$cached_package"
+  package="$cached_package"
+fi
 state_write VERIFIED "$remote_package_version" "$package_sha"
+prune_candidates "$cached_package"
 if runtime_is_open; then
   state_write DEFERRED "$remote_package_version" "$package_sha"
   if [[ "$WAIT_CLOSE" == 0 ]]; then
@@ -788,3 +818,4 @@ fi
 
 echo "$PROGRAM: installed $remote_package_version"
 state_write INSTALLED "$remote_package_version" "$package_sha"
+prune_candidates

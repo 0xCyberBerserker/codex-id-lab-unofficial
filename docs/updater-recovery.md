@@ -44,6 +44,11 @@ OCR/QR dependencies and PySide6 are optional package metadata. Removing those
 tools does not remove the runtime; the corresponding companion command reports
 its missing prerequisite. Existing optional tools are not uninstalled.
 
+The updater stages large downloads on the user cache filesystem, not in
+`/tmp`. It reuses a verified candidate without making a second copy. Only one
+candidate is kept when deferred or failed; a successful installation releases
+that space. This does not clean package-manager caches or user backups.
+
 ## Español
 
 El gestor de paquetes es la única autoridad sobre rutas instaladas. Primero se
@@ -59,6 +64,11 @@ explícito. Interrumpir el proceso deja su última transición; el reintento vue
 a autenticar manifiesto y paquete. El journal privado no garantiza persistencia
 frente a pérdida eléctrica. Una transacción del gestor interrumpida debe revisarse
 con pacman, dpkg/apt o rpm/dnf, sin renombrar sus árboles desde este updater.
+
+El actualizador descarga los paquetes grandes en la caché del usuario, no en
+`/tmp`, y reutiliza el archivo verificado sin duplicarlo. Conserva un solo
+candidato si se aplaza o falla la instalación y lo retira al terminar bien.
+No limpia la caché del gestor de paquetes ni las copias de seguridad.
 
 `codex-lab-install --recover` fija identidad y digest al candidato retenido, no a
 la última release. Rechaza journal corrupto/ambiguo/enlazado y digest remoto cambiado;

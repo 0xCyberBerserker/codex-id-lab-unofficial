@@ -8,7 +8,7 @@
     "capabilities": ["native-pet", "read-only-usage"],
     "stability": "experimental",
     "tests": ["node --test tests/native-pet-quota.test.mjs"],
-    "compatibility": { "asarSha256": ["6570177341c8a8b98c7036dcf95d008b48d8fbb0cf0961dc3e1aba137bc9e29a"] },
+    "compatibility": { "asarSha256": ["6570177341c8a8b98c7036dcf95d008b48d8fbb0cf0961dc3e1aba137bc9e29a", "1aa2dfb8555fb4803bffeda9038f8161fefabe5bb3d3dd2a7a489eca37d88f55"] },
     "acceptancePending": "Physical multi-monitor drag and ordinary mouse gaze are not accepted."
   }
 }

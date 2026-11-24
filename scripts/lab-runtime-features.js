@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const crypto = require("node:crypto");
-const nativePetBundle = /^webview\/assets\/async\/355340\.2e31e7f34f\.js$/;
+const nativePetBundle = /^webview\/assets\/async\/(355340\.2e31e7f34f|268134\.9d35b4d545)\.js$/;
 
 function sha(file) { return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex"); }
 
@@ -146,4 +146,4 @@ async function stageRuntime(appDir, enabled) {
   } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
 }
 
-module.exports = { patchSources, stageRuntime, assertDisposableCandidate };
+module.exports = { patchSources, stageRuntime, assertDisposableCandidate, nativePetBundle };

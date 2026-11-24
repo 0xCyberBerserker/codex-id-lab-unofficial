@@ -34,6 +34,16 @@ test("native snapshots render only valid windows and update from new data", () =
   assert.deepEqual(quotaRows(null, now, "en"), []);
 });
 
+test("reviewed 26.1120 renderer uses its live query and layout bindings", () => {
+  const bundle = "webview/assets/async/268134.9d35b4d545.js";
+  const fixture = 'function iN(e){return {items:[{node:jsx(A,{skin:em},"pet"):null]})}),az?null:';
+  const files = { [bundle]: fixture };
+  assert.equal(runtime.patchSources(files, ["native-pet-quota"])[0].file, bundle);
+  assert.match(files[bundle], /a\("Q840"\)\.Ul,a\("gPv1"\)\.Ix/);
+  assert.match(files[bundle], /a\$\?\(0,i\.jsx\)\(codexLabNativeQuotaPanel/);
+  assert.match(files[bundle], /visibleBounds:ex\.visibleBounds,tray:ex\.tray\?\?null/);
+});
+
 test("panel reacts to query updates and does not retain unavailable data", t => {
   t.mock.method(Date, "now", () => Date.parse("2026-11-22T10:00:00Z"));
   Object.defineProperty(globalThis, "document", {
